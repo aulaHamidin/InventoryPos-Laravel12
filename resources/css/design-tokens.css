@@ -1,0 +1,76 @@
+:root {
+    --iq-font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+
+    --iq-primary-50: 238 242 255;
+    --iq-primary-100: 224 231 255;
+    --iq-primary-200: 199 210 254;
+    --iq-primary-300: 165 180 252;
+    --iq-primary-400: 129 140 248;
+    --iq-primary-500: 99 102 241;
+    --iq-primary-600: 79 70 229;
+    --iq-primary-700: 67 56 202;
+    --iq-primary-800: 55 48 163;
+    --iq-primary-900: 49 46 129;
+    --iq-primary-950: 30 27 75;
+
+    --iq-success-50: 236 253 245;
+    --iq-success-100: 209 250 229;
+    --iq-success-200: 167 243 208;
+    --iq-success-300: 110 231 183;
+    --iq-success-400: 52 211 153;
+    --iq-success-500: 16 185 129;
+    --iq-success-600: 5 150 105;
+    --iq-success-700: 4 120 87;
+    --iq-success-800: 6 95 70;
+    --iq-success-900: 6 78 59;
+    --iq-success-950: 2 44 34;
+
+    --iq-warning-50: 255 251 235;
+    --iq-warning-100: 254 243 199;
+    --iq-warning-200: 253 230 138;
+    --iq-warning-300: 252 211 77;
+    --iq-warning-400: 251 191 36;
+    --iq-warning-500: 245 158 11;
+    --iq-warning-600: 217 119 6;
+    --iq-warning-700: 180 83 9;
+    --iq-warning-800: 146 64 14;
+    --iq-warning-900: 120 53 15;
+    --iq-warning-950: 69 26 3;
+
+    --iq-danger-50: 255 241 242;
+    --iq-danger-100: 255 228 230;
+    --iq-danger-200: 254 205 211;
+    --iq-danger-300: 253 164 175;
+    --iq-danger-400: 251 113 133;
+    --iq-danger-500: 244 63 94;
+    --iq-danger-600: 225 29 72;
+    --iq-danger-700: 190 18 60;
+    --iq-danger-800: 159 18 57;
+    --iq-danger-900: 136 19 55;
+    --iq-danger-950: 76 5 25;
+
+    --iq-info-50: 240 249 255;
+    --iq-info-500: 14 165 233;
+    --iq-info-600: 2 132 199;
+    --iq-info-700: 3 105 161;
+
+    --iq-surface-page: 249 250 251;
+    --iq-surface-panel: 255 255 255;
+    --iq-foreground: 17 24 39;
+    --iq-muted-foreground: 107 114 128;
+    --iq-border: 229 231 235;
+    --iq-disabled: 209 213 219;
+    --iq-focus: var(--iq-primary-600);
+    color-scheme: light;
+}
+
+.dark {
+    --iq-surface-page: 3 7 18;
+    --iq-surface-panel: 31 41 55;
+    --iq-foreground: 243 244 246;
+    --iq-muted-foreground: 156 163 175;
+    --iq-border: 55 65 81;
+    --iq-disabled: 75 85 99;
+    --iq-focus: var(--iq-primary-400);
+    color-scheme: dark;
+}

@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@tailwind variants;
+@import '../../../../vendor/filament/filament/resources/css/base.css';
+@import '../../design-tokens.css';
+
+@config 'tailwind.config.js';
+
+@layer base {
+    body {
+        font-family: var(--iq-font-sans);
+        background-color: rgb(var(--iq-surface-page));
+        color: rgb(var(--iq-foreground));
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+}
+
+@media print {
+    .fi-sidebar,
+    .fi-topbar,
+    .fi-breadcrumbs,
+    .fi-ta-header-toolbar,
+    .fi-ta-actions,
+    .fi-pagination,
+    .fi-global-search,
+    .fi-no-print {
+        display: none !important;
+    }
+
+    .fi-main-ctn,
+    .fi-main {
+        margin: 0 !important;
+        padding: 0 !important;
+        max-width: none !important;
+    }
+
+    .fi-ta-ctn {
+        border: 0 !important;
+        box-shadow: none !important;
+    }
+}

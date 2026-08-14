@@ -1,0 +1,34 @@
+@import './design-tokens.css';
+
+@layer base {
+    body {
+        font-family: var(--iq-font-sans);
+        background-color: rgb(var(--iq-surface-page));
+        color: rgb(var(--iq-foreground));
+        @apply antialiased;
+    }
+}
+
+@media print {
+    body.printing-receipt * {
+        visibility: hidden;
+    }
+
+    body.printing-receipt #transaction-receipt,
+    body.printing-receipt #transaction-receipt * {
+        visibility: visible;
+    }
+
+    body.printing-receipt #transaction-receipt {
+        position: absolute;
+        inset: 0 auto auto 0;
+        width: 80mm;
+        max-width: 80mm;
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    body.printing-receipt .iq-no-print {
+        display: none !important;
+    }
+}
