@@ -605,7 +605,7 @@ Status: implementation Fase 0-4 selesai secara kode; automated gate dan runtime 
 
 1. Walkthrough visual desktop/mobile Owner dan Staff belum dapat dijalankan karena browser in-app tidak terhubung (`No browser is available`). Contract HTTP/render sudah diuji otomatis, tetapi screenshot/evidence visual tetap wajib.
 
-2. Workflow `.github/workflows/ci.yml` sudah tersedia untuk PHP 8.3/Node 20/MySQL/Redis/build, tetapi belum dapat dibuktikan melalui run remote karena workspace belum memiliki repository remote.
+2. Repository GitHub `aulaHamidin/InventoryPos-Laravel12` sudah terhubung dan branch `main` telah dipush pada commit `204c0fa`. Workflow `.github/workflows/ci.yml` sudah terpicu, tetapi hasil run remote belum dapat diverifikasi karena repository privat belum dapat diperiksa tanpa sesi GitHub terautentikasi.
 
 Fase 5 tetap dibekukan. Fase 0-4 baru boleh dicentang setelah dua gate eksternal di atas ditutup.
 

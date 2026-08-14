@@ -52,7 +52,8 @@ Dokumen ini mencatat bukti gate setelah repair Fase 0–4. Checklist fase pada `
 
 - [x] Workflow GitHub Actions memakai PHP 8.3, Node 20, MySQL 8.4, dan Redis.
 - [x] Workflow menjalankan Composer validation, platform check, build, fresh migration/seed, Pest, dan Pint.
-- [ ] Repository remote tersedia dan satu run workflow berhasil.
+- [x] Repository GitHub tersedia dan branch `main` sudah dipush.
+- [ ] Satu run workflow GitHub Actions berhasil.
 
 ## Manual test notes
 
@@ -66,4 +67,4 @@ Catat tanggal, browser/device, actor, hasil, dan screenshot/evidence untuk setia
 - Container gate: fresh migration/seed database MySQL `testing` lulus; 44 test dan 202 assertion lulus dari dalam Sail.
 - HTTP gate: `/admin/login` 200; custom theme 200 (109890 byte), semantic Indigo token dan print CSS terdeteksi; `/api/v1/items` tanpa token menghasilkan 401.
 - Browser in-app tidak tersedia pada sesi ini (`No browser is available`), sehingga seluruh checkbox Visual walkthrough tetap terbuka.
-- Repository belum memiliki remote; workflow tersedia tetapi bukti satu run CI remote tetap terbuka.
+- Repository GitHub `aulaHamidin/InventoryPos-Laravel12` tersedia; branch `main` telah dipush pada commit `204c0fa` dan memicu workflow. Bukti hasil satu run CI remote tetap terbuka karena repository privat belum dapat diperiksa tanpa sesi GitHub terautentikasi.
