@@ -375,8 +375,8 @@ new_avg = ((old_stock × old_avg) + (in_qty × in_cost)) / (old_stock + in_qty)
 - [x] Contract delta, schema, Action, API, Filament/Livewire, dan automated test selesai.
 - [x] Fresh/upgrade migration serta local quality gate lulus (65 test / 314 assertion).
 - [x] Visual evidence desktop/mobile selesai.
-- [ ] Commit SHA dan CI remote hijau.
-- [ ] Fase 5 ditutup.
+- [x] Commit `b1eb283` dan CI remote run `31891377024` hijau.
+- [x] Fase 5 ditutup.
 
 ---
 

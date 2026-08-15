@@ -40,7 +40,7 @@ Source of truth tetap mengikuti urutan:
 
 ```mermaid
 flowchart LR
-    F04["Fase 0–4\nSELESAI"] --> F5["Fase 5\nCycle Counting"]
+    F04["Fase 0–4\nSELESAI"] --> F5["Fase 5\nCycle Counting\nSELESAI"]
     F5 --> F6["Fase 6\nPOS Lengkap & QRIS"]
     F6 --> F7["Fase 7\nAnalytics & Threshold"]
     F7 --> F8["Fase 8\nStaff & Multi-Kasir"]
@@ -192,8 +192,8 @@ Menyediakan stock opname parsial per rak dan full count yang tetap konsisten saa
 - [x] Concurrency dan time-aware test lulus.
 - [x] API dan UI contract lulus.
 - [x] Visual evidence desktop/mobile lengkap.
-- [ ] Full quality gate dan CI remote hijau.
-- [ ] Fase 5 ditandai selesai di execution plan.
+- [x] Full quality gate dan CI remote hijau.
+- [x] Fase 5 ditandai selesai di execution plan.
 
 ---
 
@@ -705,7 +705,7 @@ Evidence tidak boleh memuat `.env`, secret, access token, OTP nyata, webhook sig
 
 ### Execution
 
-- [ ] Fase 5 — Cycle Counting.
+- [x] Fase 5 — Cycle Counting.
 - [ ] Fase 6 — Smart POS Lengkap & QRIS.
 - [ ] Fase 7 — Analytics & Smart Threshold.
 - [ ] Fase 8 — Staff & Multi-Kasir.
@@ -726,4 +726,4 @@ Evidence tidak boleh memuat `.env`, secret, access token, OTP nyata, webhook sig
 
 ## 16. Langkah Berikutnya
 
-Langkah implementasi berikutnya adalah membuat **implementation plan rinci Fase 5**, menjalankan audit schema/kode Cycle Counting, lalu meminta persetujuan hanya jika audit menemukan Document Delta. Setelah Fase 5 lulus seluruh gate, proses yang sama diulang untuk Fase 6.
+Fase 5 telah ditutup. Langkah berikutnya adalah membuat **implementation plan rinci Fase 6**, menutup CD-6.1 bila schema QRIS membutuhkan struktur provider/payment-attempt tambahan, lalu menjalankan implementasi Smart POS Lengkap & QRIS sesuai release-blocker gate.
