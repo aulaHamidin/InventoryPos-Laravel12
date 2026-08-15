@@ -115,6 +115,20 @@ Payment:
 - Preferred selection harus transaction + lock.
 - Shopping list tidak boleh menebak supplier dari movement terakhir.
 
+### Analytics & Smart Threshold
+
+- Boundary bisnis memakai zona waktu `Asia/Jakarta` dan half-open window `[as_of - duration, as_of)`.
+- Item belum berumur penuh 30×24 jam wajib `unclassified`; tidak boleh prorata atau fake class.
+- Demand hanya `max(0, Σsale - Σsale_void - Σcustomer_return)`; stock/adjustment/opname/supplier movements dikecualikan.
+- Ambang tetap: fast `>=1.00`, normal `>=0.25 dan <1.00`, slow `<0.25`; dead adalah override setelah eligibility.
+- `tenant.dead_stock_days=0` menonaktifkan dead. Eligible tanpa movement menghasilkan threshold nol dan class slow kecuali memenuhi dead override.
+- Preferred supplier dengan lead time non-null, termasuk nol, dipakai sebelum item lead time fallback.
+- Event after-commit, relevant config/supplier changes, daily sweep, direct endpoint, dan preview wajib memakai calculator backend yang sama.
+- Hanya `threshold_mode=auto_velocity` boleh memperbarui `stok_minimal`; mode manual tidak boleh ditimpa.
+- Semua item aktif tetap memperoleh persisted analytics class/timestamp saat kalkulasi berhasil, termasuk mode manual.
+- Recalculation analytics tidak boleh mengubah stock, average cost, atau immutable movement ledger.
+- Fase 7 hanya Owner. Staff operational read-only analytics baru aktif setelah Fase 8 dan tidak boleh menerima financial fields.
+
 ### Billing
 
 - `subscriptions.status` adalah source of truth billing.
@@ -159,7 +173,6 @@ Jangan mengusulkan tanpa perubahan kontrak:
 - CQRS.
 - Event Sourcing penuh.
 - Kubernetes/Kafka untuk kebutuhan ini.
-- POS transfer payment.
 - Automated refund POS pada v1.
 - Stock reservation v1.
 - Composite FK sebagai mekanisme utama tenant isolation.
@@ -256,6 +269,7 @@ Setiap istilah seperti:
 - paid;
 - refunded;
 - eligible;
+- unclassified;
 - trial;
 
 harus memiliki definisi eksplisit.
@@ -281,6 +295,14 @@ harus memiliki definisi eksplisit.
 | Opname | Concurrency |
 | Opname | Time-aware reconciliation |
 | Supplier | Preferred concurrency |
+| Analytics | Window start-inclusive/end-exclusive `Asia/Jakarta` |
+| Analytics | Full-history eligibility dan `unclassified` |
+| Analytics | Net POS demand, numeric boundary, dead override |
+| Smart Threshold | Preferred lead-time zero/fallback dan ceil |
+| Smart Threshold | Manual preservation dan 422 zero mutation |
+| Analytics recalculation | After-commit/event/config/daily/direct parity |
+| Analytics tenant | Isolation, ownership, no-N+1 |
+| Analytics permission | Owner-only F7; Staff operational/no-financial setelah F8 |
 | Trial | Trial reuse rejection |
 | Billing | State transition |
 | Billing webhook | Duplicate/out-of-order |
@@ -302,6 +324,10 @@ Agent tidak boleh:
 - membuat adapter, endpoint, atau state Midtrans POS;
 - finalize payment tanpa state validation;
 - menebak supplier;
+- menghitung analytics dengan prorata umur item atau window selain 30×24 jam;
+- memakai gross sale atau seluruh stock out sebagai POS demand;
+- menghitung ulang formula Smart Threshold di frontend;
+- menimpa `stok_minimal` mode manual dari job/event/sweep;
 - membuat trial tanpa histori check;
 - delete transaction individual;
 - bypass Action untuk support/admin stock correction;

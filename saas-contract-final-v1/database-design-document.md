@@ -63,7 +63,7 @@ erDiagram
 | slug | VARCHAR(255) | UNIQUE |
 | operational_status | ENUM | `active`, `banned` |
 | allow_negative_stock | BOOLEAN | DEFAULT false |
-| dead_stock_days | INT | DEFAULT 90 |
+| dead_stock_days | INT | DEFAULT 90, `>= 0`; `0` disables dead classification |
 | created_at | TIMESTAMP | |
 | updated_at | TIMESTAMP | |
 
@@ -174,7 +174,8 @@ Unique:
 | lead_time_days | INT | ≥ 0 |
 | safety_stock_days | INT | ≥ 0 |
 | exp_date | DATE | nullable |
-| movement_class | ENUM | `fast`, `normal`, `slow`, `dead` |
+| movement_class | ENUM | `unclassified`, `fast`, `normal`, `slow`, `dead`; default `unclassified` |
+| analytics_calculated_at | TIMESTAMP | nullable |
 | is_active | BOOLEAN | default true |
 | timestamps | | |
 | deleted_at | TIMESTAMP | nullable |
@@ -184,6 +185,10 @@ Constraints:
 - `UNIQUE(tenant_id, kode)`
 - `UNIQUE(tenant_id, barcode)` dengan kebijakan nullable MySQL.
 - `CHECK` untuk nilai non-negatif.
+
+`analytics_calculated_at` adalah waktu `as_of` kalkulasi analytics terakhir yang berhasil dipersist. Item dengan histori kurang dari 30×24 jam tetap `unclassified`.
+
+Migration Fase 7 kelak mengubah seluruh baseline class menjadi `unclassified` dan baseline `threshold_mode=auto_velocity` menjadi `manual` sambil mempertahankan `stok_minimal`. Migration tersebut tidak mengubah stock, average cost, atau immutable movement ledger.
 
 `average_cost` hanya diubah oleh stock movement Action yang relevan.
 
@@ -587,6 +592,8 @@ Minimum:
 - `tenant_id`;
 - `(tenant_id, created_at)`;
 - `(tenant_id, item_id, created_at)`;
+- `(tenant_id, item_id, movement_type, created_at)` untuk Net POS analytics;
+- `(tenant_id, is_active, movement_class)` untuk dashboard analytics;
 - `(tenant_id, barcode)`;
 - `(tenant_id, kode)`;
 - `(tenant_id, pos_transaction_id)`;
@@ -623,10 +630,12 @@ Purge bersifat irreversible.
 3. POS historical records tidak dihapus.
 4. `returned_qty <= qty`.
 5. Payment refunded amount tidak boleh melebihi payment amount.
-6. Trial satu kali per owner/nomor HP.
-7. Satu preferred supplier maksimum satu per item.
-8. Opname detail satu item hanya satu kali per session.
-9. `ends_at` subscription tidak null.
-10. Stock mutation dan movement insert satu transaction.
-11. Multi-item lock order berdasarkan ascending item ID.
-12. Tenant purge hanya level tenant.
+6. `movement_class=unclassified` untuk item yang belum memiliki histori penuh 30×24 jam.
+7. Recalculation tidak boleh mengubah stock, average cost, atau immutable movement ledger.
+8. Trial satu kali per owner/nomor HP.
+9. Satu preferred supplier maksimum satu per item.
+10. Opname detail satu item hanya satu kali per session.
+11. `ends_at` subscription tidak null.
+12. Stock mutation dan movement insert satu transaction.
+13. Multi-item lock order berdasarkan ascending item ID.
+14. Tenant purge hanya level tenant.

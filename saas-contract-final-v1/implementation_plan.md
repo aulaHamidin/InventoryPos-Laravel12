@@ -399,13 +399,24 @@ new_avg = ((old_stock × old_avg) + (in_qty × in_cost)) / (old_stock + in_qty)
 
 ## Fase 7 — Analytics & Smart Threshold *(Parallel setelah F4)*
 
+### Contract status — 2026-08-16
+
+- [x] CD-7.1 ditutup oleh `document-delta-f7-analytics-smart-threshold.md`.
+- [x] Source of truth dan enforcement contract disinkronkan.
+- [ ] Susun dan setujui `implementation-plan-fase-7.md` sebelum coding.
+
 ### Deliverables
-- 30-day movement SMA calculation
-- Fast/slow/dead stock classification
-- Smart Threshold: `ceil(avg_daily_out × (lead_time + safety_stock))`
-- `POST /api/v1/items/{id}/smart-threshold`
-- Dashboard recommendation widgets
-- All calculations unit tested without DB
+
+- Pure calculator untuk half-open 30×24-hour window dalam `Asia/Jakarta`.
+- Net POS demand: `max(0, sale - sale_void - customer_return)`; movement lain dikecualikan.
+- Persisted `unclassified|fast|normal|slow|dead`, termasuk full-history eligibility dan dead override.
+- Smart Threshold: `ceil((net_demand_30_days / 30) × (effective_lead_time_days + safety_stock_days))`.
+- Preferred supplier non-null lead time, termasuk nol, dengan fallback item lead time.
+- After-commit/relevant-config recalculation dan daily sweep melalui calculator yang sama.
+- Owner-only `POST /api/v1/items/{id}/smart-threshold` dengan detailed breakdown dan zero-mutation `422 INSUFFICIENT_HISTORY`.
+- Owner dashboard dan internal Filament preview; Staff baru memperoleh operational read-only insight setelah Fase 8.
+- Migration additive untuk enum/default, `analytics_calculated_at`, dan dua index analytics; baseline aman tanpa stock/ledger mutation.
+- Unit, feature, policy, tenant-isolation, query-count, scheduler/event, dan visual tests sesuai delta.
 
 ---
 
@@ -567,7 +578,7 @@ Fase 5 tidak boleh dimulai sebelum acceptance dan testing contract Fase 0-4 lulu
 
 - Fase 5: stock opname.
 - Fase 6: manual QRIS/transfer, expiry, void, return, refund, history/reporting.
-- Fase 7: analytics dan Smart Threshold.
+- Fase 7: CD-7.1 analytics dan Smart Threshold telah ditutup; implementation plan dan coding belum dimulai.
 - Fase 8: aktivasi Staff dan multi-kasir.
 - Fase 10+: billing, platform admin, impersonation, deletion.
 

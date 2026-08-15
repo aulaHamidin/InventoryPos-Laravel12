@@ -130,6 +130,8 @@ Optimized lookup untuk POS.
 
 ### `POST /items/{id}/smart-threshold`
 
+Owner only. Endpoint ini menghitung langsung dengan calculator backend yang sama dengan event job dan daily sweep. `as_of` ditetapkan server dalam zona waktu bisnis `Asia/Jakarta`.
+
 Request:
 
 ```json
@@ -139,6 +141,67 @@ Request:
   "safety_stock_days": 2
 }
 ```
+
+Request hanya menerima tiga field tersebut. `threshold_mode` wajib bernilai `auto_velocity`; `lead_time_days` dan `safety_stock_days` wajib integer non-negatif. `tenant_id`, `supplier_id`, nilai stok, nilai demand, class, threshold hasil, dan `as_of` tidak diterima dari client.
+
+Perhitungan memakai half-open window `[as_of - 30×24 jam, as_of)`. Preferred supplier milik tenant yang sama dengan `lead_time_days` non-null, termasuk nol, menjadi sumber lead time; jika tidak tersedia, calculator memakai `items.lead_time_days`. Ownership atau preferred supplier lintas tenant ditolak fail-closed.
+
+Success `200`:
+
+```json
+{
+  "status": "success",
+  "message": "Smart threshold berhasil diterapkan.",
+  "data": {
+    "item_id": 10,
+    "threshold_mode": "auto_velocity",
+    "window": {
+      "timezone": "Asia/Jakarta",
+      "start_inclusive": "2026-07-17T10:00:00+07:00",
+      "end_exclusive": "2026-08-16T10:00:00+07:00"
+    },
+    "history": {
+      "eligible": true,
+      "eligible_at": "2026-07-20T08:00:00+07:00"
+    },
+    "gross_sale_qty": 60,
+    "sale_void_qty": 3,
+    "customer_return_qty": 2,
+    "reversal_qty": 5,
+    "net_demand_qty": 55,
+    "avg_daily_out": 1.833333,
+    "lead_time": {
+      "source": "preferred_supplier",
+      "effective_days": 5
+    },
+    "safety_stock_days": 2,
+    "dead_window": {
+      "days": 60,
+      "start_inclusive": "2026-06-17T10:00:00+07:00",
+      "end_exclusive": "2026-08-16T10:00:00+07:00",
+      "net_demand_qty": 55
+    },
+    "recommended_threshold": 13,
+    "movement_class": "fast",
+    "calculated_at": "2026-08-16T10:00:00+07:00"
+  }
+}
+```
+
+Jika item belum mempunyai histori penuh 30×24 jam, endpoint mengembalikan HTTP `422`, tidak mengubah `threshold_mode`, lead/safety days, `stok_minimal`, `movement_class`, atau `analytics_calculated_at`, dan tidak membuat audit perubahan bisnis:
+
+```json
+{
+  "status": "error",
+  "message": "Histori item belum mencapai 30 hari penuh.",
+  "error_code": "INSUFFICIENT_HISTORY",
+  "errors": {
+    "eligible_at": "2026-08-20T08:00:00+07:00"
+  }
+}
+```
+
+Untuk ledger dan input yang sama, pengulangan menghasilkan business values yang sama. Persistence sukses dilakukan atomik; audit hanya dibuat jika business fields benar-benar berubah. Endpoint ini tidak mengubah stock, average cost, atau immutable movement ledger.
 
 ### Rack CRUD
 
@@ -581,6 +644,7 @@ Minimum:
 - `OWNERSHIP_VIOLATION`
 - `INSUFFICIENT_STOCK`
 - `ITEM_INACTIVE`
+- `INSUFFICIENT_HISTORY`
 - `INVALID_STATE_TRANSITION`
 - `IDEMPOTENCY_CONFLICT`
 - `PAYMENT_NOT_FOUND`

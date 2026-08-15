@@ -430,28 +430,42 @@ Kontrak ini sengaja tidak melakukan historical-cost accounting.
 
 ## 13. Smart Threshold
 
-Default model:
+Semua boundary bisnis kalkulasi memakai `as_of` dalam zona waktu `Asia/Jakarta` dan half-open window `[as_of - duration, as_of)`. Representasi penyimpanan internal tidak boleh mengubah boundary tersebut. Item baru menjadi eligible setelah memiliki histori penuh 30×24 jam berdasarkan `items.created_at`. Sebelum itu class adalah `unclassified`, mode threshold tetap manual, dan tidak ada prorata hari aktif.
 
-- movement window 30 hari;
-- SMA unit/day;
-- lead time dari preferred supplier;
-- fallback `items.lead_time_days`;
-- safety stock days.
-
-Contoh:
+Demand hanya berasal dari Net POS:
 
 ```text
-avg_daily_out =
-total_out_30_days / 30
+net_out = max(
+  0,
+  Σ sale - Σ sale_void - Σ customer_return
+)
+
+avg_daily_out = net_out_30_days / 30
 
 threshold =
 ceil(
   avg_daily_out
-  * (lead_time_days + safety_stock_days)
+  * (effective_lead_time_days + safety_stock_days)
 )
 ```
 
-Jika histori belum mencukupi, sistem menggunakan mode manual atau menampilkan bahwa rekomendasi belum tersedia.
+Movement stock-in/out operasional, supplier return, damaged, adjustment, dan opname adjustment tidak dihitung sebagai demand.
+
+Classification:
+
+| Kelas | Rule |
+|---|---|
+| `unclassified` | histori `< 30×24 jam` |
+| `fast` | `avg_daily_out >= 1.00` |
+| `normal` | `0.25 <= avg_daily_out < 1.00` |
+| `slow` | `0 <= avg_daily_out < 0.25` |
+| `dead` | item cukup umur dan net demand pada dead window nol |
+
+Dead dievaluasi setelah eligibility dan sebelum velocity. `dead_stock_days=0` menonaktifkan dead. Item eligible tanpa movement menghasilkan threshold `0` dan menjadi slow kecuali memenuhi dead.
+
+Effective lead time berasal dari preferred supplier bila nilainya non-null—termasuk nol—kemudian fallback ke `items.lead_time_days`. `stok_minimal` hanya diubah otomatis dalam mode `auto_velocity`; mode manual tidak boleh ditimpa.
+
+Event `sale|sale_void|customer_return` menjadwalkan recalculation setelah commit. Perubahan preferred supplier/lead time, item lead/safety days, threshold mode, dan dead days juga memicu recalculation. Daily sweep menangani aging/window shift dan explicit Smart Threshold action menghitung langsung menggunakan calculator yang sama.
 
 Forecasting statistik bukan bagian produk.
 

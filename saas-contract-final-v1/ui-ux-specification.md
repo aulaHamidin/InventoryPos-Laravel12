@@ -518,6 +518,37 @@ Visualization type ditentukan oleh informasi yang ingin disampaikan.
 
 ---
 
+## 12.2 Analytics dan Smart Threshold
+
+Fase 7 menyediakan analytics hanya untuk Owner. Aktivasi login dan permission Staff tetap berada pada Fase 8.
+
+Dashboard analytics wajib membedakan state berikut:
+
+- populated `fast|normal|slow`;
+- `unclassified` karena histori belum mencapai 30×24 jam;
+- eligible tanpa movement;
+- `dead` override;
+- loading;
+- error.
+
+State `unclassified` menampilkan progress umur histori dan tanggal/jam eligibility dalam zona waktu `Asia/Jakarta`; UI tidak boleh mengubahnya menjadi `normal` atau membuat prorata. Eligible tanpa movement menampilkan threshold `0` dan class `slow`, kecuali aturan dead terpenuhi.
+
+Smart Threshold action menampilkan:
+
+- window half-open 30 hari;
+- gross sale, void, return, dan net demand;
+- average harian;
+- sumber lead time (`preferred_supplier` atau `item`) dan nilai efektifnya, termasuk nol;
+- safety stock days;
+- rekomendasi threshold dan class;
+- penjelasan bahwa hanya mode `auto_velocity` yang memperbarui `stok_minimal` otomatis.
+
+Preview merupakan internal Filament surface yang memanggil calculator backend. Formula tidak dihitung ulang di browser. HTTP `422 INSUFFICIENT_HISTORY` ditampilkan sebagai unavailable state beserta `eligible_at`, tanpa success toast atau perubahan nilai semu.
+
+Setelah Fase 8, Staff hanya boleh membaca insight operasional yang bebas purchase cost, margin, valuation, profit, dan billing sesuai Policy. Tombol apply Smart Threshold tidak ditampilkan tanpa permission Owner; hiding tersebut bukan security boundary.
+
+---
+
 # 13. Financial Terminology
 
 Produk bukan software accounting.
@@ -2034,6 +2065,18 @@ Minimum test scenario:
 - suspended;
 - payment action.
 
+### Analytics dan Smart Threshold
+
+- populated fast/normal/slow;
+- `unclassified` beserta progress dan `eligible_at`;
+- eligible tanpa movement;
+- dead override dan `dead_stock_days=0`;
+- preview/apply dari calculator backend;
+- success dan `INSUFFICIENT_HISTORY` tanpa mutation;
+- loading/error;
+- Owner/Staff permission dan tidak ada financial leakage;
+- desktop/mobile.
+
 ### Permission
 
 - owner;
@@ -2122,6 +2165,20 @@ Reporting dianggap selesai apabila:
 - loading state jelas;
 - export progress jelas;
 - hasil export dapat diakses setelah backend selesai memproses.
+
+---
+
+## 69.1 Definition of Done — Analytics & Smart Threshold
+
+Analytics dianggap selesai apabila:
+
+- populated, `unclassified`, no-movement, `dead`, loading, dan error state dapat dibedakan;
+- window dan timestamp ditampilkan dalam zona waktu `Asia/Jakarta`;
+- formula breakdown dan sumber lead time berasal dari response backend;
+- item belum eligible menampilkan `eligible_at` tanpa fake class atau mutation;
+- apply hanya tersedia untuk Owner dan mode `auto_velocity`;
+- insight Staff baru tersedia setelah Fase 8 dan bebas data financial;
+- seluruh state responsif pada desktop/mobile.
 
 ---
 

@@ -108,7 +108,7 @@ Sebuah fase dinyatakan selesai hanya jika:
 |---|---|---|---|
 | 5 | Item, rack, stock ledger F1 | PRD 6.8; Blueprint 15; DDD 3.13–3.14; SAD 5.5/13; API 8; UI 22/68 | Siap direncanakan |
 | 6 | POS cash F2 dan ledger F1 | PRD 6.3–6.6; Blueprint 9–11; DDD 3.10–3.12; SAD 5.1–10; API 5–6; UI 23–33/66 | Setelah F5 |
-| 7 | Movement F1, Shopping F4 | PRD 5.1; Blueprint 13; DDD item analytics fields; API 4; UI 12; Roadmap F7 | Setelah F6 |
+| 7 | Movement F1, Shopping F4 | PRD 6.10; Blueprint 13; DDD item analytics fields/indexes; SAD 13.1; API 4; UI 12.2/69.1; Roadmap F7 | Setelah F6 |
 | 8 | Panel tenant F0 dan POS F6 | PRD 4.2; Blueprint 4; SAD 17; UI 11/40/42; Roadmap F8 | Setelah F7 |
 | 9 | Workflow operasional F5–F8 | PRD 9–11; SAD 18–19; UI 64–65; Roadmap F9 | Setelah F8 |
 | 10 | Panel platform F0 | PRD 4.3/7/9; Blueprint 17–19; DDD 3.17–3.24; SAD 5.3/14–17; API 11–13; UI 41–44 | Setelah F9 |
@@ -124,7 +124,7 @@ Empat area belum memiliki detail yang cukup untuk diimplementasikan tanpa keputu
 | Gate | Kekosongan kontrak | Tindakan wajib |
 |---|---|---|
 | CD-6.1 | Kontrak lama mengunci Midtrans POS tetapi kebutuhan produk adalah pencatatan manual | Ditutup oleh `document-delta-f6-pos-manual-payment.md`; Midtrans tetap hanya untuk billing F11 |
-| CD-7.1 | Batas numerik klasifikasi `fast`, `normal`, `slow`, `dead` dan jenis movement yang dihitung belum eksplisit | Ajukan Document Delta yang menetapkan algoritme deterministik; `tenant.dead_stock_days` tetap menjadi input dead stock |
+| CD-7.1 | Batas numerik, movement pembentuk demand, window, eligibility, dead override, persistence, recalculation, API, dan permission analytics | **Ditutup 2026-08-16** oleh `document-delta-f7-analytics-smart-threshold.md`; `tenant.dead_stock_days=0` menonaktifkan dead |
 | CD-10.1 | Capability matrix subscription `trial/active/past_due/suspended/expired` diwajibkan tetapi belum dirinci | Ajukan matrix read/write/login/billing yang eksplisit tanpa mencampur `tenants.operational_status` |
 | CD-11.1 | Provider, expiry, retry, attempt limit, rate limit, dan penyimpanan OTP belum dikunci | Ajukan Document Delta keamanan OTP; jangan menambah tabel/endpoint di luar API contract tanpa persetujuan |
 
@@ -287,46 +287,53 @@ Mengubah movement 30 hari menjadi insight operasional fast/normal/slow/dead dan 
 ### 7.2 Entry gate
 
 - Fase 6 selesai dan sale/customer-return movement stabil.
-- CD-7.1 telah mengunci jenis movement serta batas klasifikasi.
+- CD-7.1 telah ditutup oleh `document-delta-f7-analytics-smart-threshold.md` dan tersinkron ke seluruh source of truth.
 
 ### 7.3 Deliverable
 
 - Pure calculator/value object untuk SMA, threshold, dan movement classification; unit test tidak membutuhkan database.
+- Boundary bisnis memakai zona waktu `Asia/Jakarta` dan half-open window `[as_of - 30×24 jam, as_of)`; item belum berumur penuh 30×24 jam tetap `unclassified` tanpa prorata.
+- Net POS demand hanya `max(0, Σsale - Σsale_void - Σcustomer_return)`; movement operasional lain dikecualikan.
 - Formula Smart Threshold terkunci:
 
 ```text
-avg_daily_out = total_out_30_days / 30
-threshold = ceil(avg_daily_out × (lead_time_days + safety_stock_days))
+avg_daily_out = net_pos_demand_30_days / 30
+threshold = ceil(avg_daily_out × (effective_lead_time_days + safety_stock_days))
 ```
 
-- Lead time memakai preferred supplier; fallback ke `items.lead_time_days`.
-- History yang tidak mencukupi menghasilkan manual/unavailable state, bukan angka palsu.
-- `POST /api/v1/items/{id}/smart-threshold` memvalidasi ownership dan hanya menerima input contract.
-- Perbarui `stok_minimal`, `threshold_mode`, dan `movement_class` melalui Action yang auditable.
-- Dashboard menampilkan critical stock, shopping recommendation, fast/slow/dead insight, lalu operational summary.
-- Staff tidak menerima data financial melalui widget/response analytics.
+- Lead time memakai nilai non-null preferred supplier, termasuk nol; fallback ke `items.lead_time_days`.
+- Kelas disimpan sebagai `unclassified|fast|normal|slow|dead`; dead mengoverride velocity bila aktif dan syarat umur/window terpenuhi.
+- `tenant.dead_stock_days=0` menonaktifkan dead; eligible tanpa movement menghasilkan threshold `0` dan class slow kecuali dead.
+- Recalculation memakai calculator yang sama setelah commit movement relevan, perubahan config/supplier, daily sweep, dan explicit action.
+- `POST /api/v1/items/{id}/smart-threshold` Owner-only, memvalidasi ownership, hanya menerima input contract, dan mengembalikan detailed breakdown.
+- History tidak mencukupi menghasilkan `422 INSUFFICIENT_HISTORY` dengan `eligible_at` dan zero mutation.
+- Semua item aktif memperoleh persisted class/timestamp saat recalculation berhasil; hanya mode `auto_velocity` memperbarui `stok_minimal` dan mode manual tidak boleh ditimpa.
+- Migration additive mereset baseline class ke `unclassified` dan baseline auto ke manual tanpa mengubah `stok_minimal`, stock, average cost, atau ledger.
+- Dashboard Owner menampilkan critical stock, shopping recommendation, populated/unclassified/no-movement/dead state, lalu operational summary.
+- Fase 7 tidak mengaktifkan Staff; setelah Fase 8 Staff hanya mendapat insight operasional read-only tanpa data financial.
 - Tidak ada forecasting statistik atau AI forecasting pada fase ini.
 
 ### 7.4 Test matrix wajib
 
-- Unit test boundary: zero movement, fractional average, `ceil`, zero lead time, fallback lead time, insufficient history.
-- Unit test seluruh batas klasifikasi hasil CD-7.1.
+- Unit test boundary: window start inclusive/end exclusive `Asia/Jakarta`, umur tepat 30×24 jam, zero movement, fractional average, `ceil`, zero lead time, fallback lead time, dan insufficient history.
+- Unit test ambang fast/normal/slow, dead precedence, `dead_stock_days=0`, dan clamp net demand nol.
 - Preferred supplier tenant lain ditolak.
-- Perhitungan memakai window 30 hari yang benar di boundary waktu.
-- Customer return/adjustment mengikuti aturan movement yang sudah diputuskan, tidak diasumsikan diam-diam.
-- API idempotent terhadap input yang sama dan tidak mengubah stok.
+- Sale void dan customer return mengurangi demand; stock/adjustment/opname/supplier movements tidak membentuk demand.
+- Event/config/scheduler/direct action memakai calculator identik; dispatch terjadi setelah commit.
+- API deterministik terhadap input/ledger sama, `422` zero mutation, dan tidak mengubah stock/ledger.
+- Mode manual mempertahankan `stok_minimal`; mode auto menerapkan nilai rekomendasi atomik dan audit hanya saat business field berubah.
 - Dashboard query tenant-scoped dan tidak N+1 pada data realistis.
-- Staff response/view bebas cost, margin, valuation, dan profit.
+- Fase 7 menolak akses Staff; test operational read-only tanpa cost, margin, valuation, dan profit dijalankan setelah aktivasi Staff pada Fase 8.
 
 ### 7.5 Visual gate
 
-- Dashboard desktop/mobile: populated, insufficient history, no movement, dan error state.
+- Dashboard desktop/mobile: populated, unclassified, no movement, dead, loading, dan error state.
 - Item smart-threshold action: preview formula/input, success feedback, dan validation error.
 - Evidence disimpan di `docs/evidence/f7-analytics-YYYY-MM-DD/`.
 
 ### 7.6 Exit checklist
 
-- [ ] CD-7.1 disetujui dan sinkron ke seluruh source of truth terkait.
+- [x] CD-7.1 disetujui dan sinkron ke seluruh source of truth terkait.
 - [ ] Pure calculation unit tests lulus tanpa DB.
 - [ ] API/dashboard/role tests lulus.
 - [ ] Visual evidence lengkap.
@@ -724,4 +731,4 @@ Evidence tidak boleh memuat `.env`, secret, access token, OTP nyata, webhook sig
 
 ## 16. Langkah Berikutnya
 
-Fase 5 telah ditutup dan Document Delta F6 disetujui. Langkah berikutnya adalah menjalankan `implementation-plan-fase-6.md` untuk POS manual non-tunai, expiry, refund, histori/reporting, dan print fallback sesuai release-blocker gate.
+Fase 6 telah selesai dan ditutup. CD-7.1 juga telah ditutup melalui Document Delta Fase 7. Langkah berikutnya adalah menyusun dan menyetujui `implementation-plan-fase-7.md` sebelum implementasi Fase 7 dimulai.

@@ -197,14 +197,24 @@ Staff tidak melihat financial data.
 
 ### Scope
 
-- fast/slow/dead;
-- 30-day movement;
-- Smart Threshold;
-- dashboard recommendations.
+- net POS demand dari `sale - sale_void - customer_return`, clamp minimum nol;
+- half-open window 30×24 jam dalam zona waktu `Asia/Jakarta`;
+- persisted `unclassified|fast|normal|slow|dead` dengan dead override;
+- Smart Threshold dari effective preferred-supplier/item lead time dan safety days;
+- after-commit recalculation, relevant-config recalculation, dan daily sweep;
+- Owner dashboard recommendations dan backend-powered preview/apply.
 
 ### Acceptance
 
-Calculation unit-tested without DB.
+- CD-7.1 ditutup oleh `document-delta-f7-analytics-smart-threshold.md` sebelum coding.
+- Pure calculator menguji semua numeric/classification boundary tanpa DB.
+- Item belum berumur penuh 30×24 jam tetap `unclassified`; endpoint menghasilkan `422 INSUFFICIENT_HISTORY` dan zero mutation.
+- Query boundary awal inklusif dan akhir eksklusif terbukti dalam `Asia/Jakarta`.
+- Hanya movement POS yang dikontrak membentuk demand; movement operasional lain dikecualikan.
+- `dead_stock_days=0`, eligible no-movement, preferred lead time nol, fallback, dan manual/auto threshold teruji.
+- Recalculation tidak mengubah stock, average cost, atau immutable movement ledger.
+- Endpoint, dashboard, policy, tenant isolation, no-N+1, dan responsive visual states lulus.
+- Staff tidak diaktifkan oleh Fase 7; kontrak read-only operasional baru berlaku setelah Fase 8.
 
 ---
 

@@ -24,6 +24,7 @@ app/
 │   ├── Payment/
 │   ├── Opname/
 │   ├── Shopping/
+│   ├── Analytics/
 │   ├── Billing/
 │   ├── Tenant/
 │   └── Admin/
@@ -56,6 +57,7 @@ Contoh:
 - `MarkPosPaymentRefundedAction`
 - `SetPreferredSupplierAction`
 - `FinalizeStockOpnameAction`
+- `ApplySmartThresholdAction`
 
 Hindari `HandleStockAction` atau `HandleTransactionAction` yang memuat banyak domain.
 
@@ -116,6 +118,13 @@ Listener tidak boleh menjadi source of truth stock mutation.
 ### Payment Boundary
 
 POS Fase 6 tidak memiliki payment provider. Cash dan manual non-tunai masuk ke `FinalizePosTransactionAction`. Midtrans hanya dibungkus oleh service billing saat Fase 11 aktif dan tidak mengetahui UI.
+
+### Analytics Boundary
+
+- Formula SMA, Net POS demand, classification, dead override, dan threshold berada pada pure calculator/value object tanpa query database.
+- Action, job, dan scheduler menyiapkan snapshot input tenant-scoped lalu memakai calculator yang sama.
+- Event/listener hanya menjadwalkan recalculation setelah commit; analytics tidak pernah memutasi stock atau movement.
+- Dashboard membaca nilai persisted dan tidak menghitung ulang raw ledger pada setiap render.
 
 ---
 
@@ -493,6 +502,68 @@ Tidak ada snapshot massal di awal.
 
 ---
 
+## 13.1 Analytics & Smart Threshold
+
+Canonical business window memakai zona waktu `Asia/Jakarta` dan half-open `[as_of - duration, as_of)`. Representasi timestamp persisten tidak boleh mengubah boundary tersebut. Eligibility memakai `items.created_at + 30×24 jam`.
+
+```text
+RecalculateItemAnalyticsAction
+ ↓
+resolve tenant + active item
+ ↓
+aggregate sale, sale_void, customer_return
+for 30-day and dead windows
+ ↓
+resolve preferred supplier lead time
+or item fallback
+ ↓
+AnalyticsCalculator (pure)
+ ├── ineligible → unclassified
+ ├── dead override
+ └── fast | normal | slow
+ ↓
+persist movement_class + analytics_calculated_at
+ ↓
+if threshold_mode=auto_velocity
+    persist stok_minimal
+else
+    preserve manual stok_minimal
+```
+
+Net demand:
+
+```text
+net_out = max(0, Σ sale - Σ sale_void - Σ customer_return)
+avg_daily_out = net_out_30_days / 30
+```
+
+Classification precedence:
+
+1. history `< 30×24 jam` → `unclassified`;
+2. dead enabled, item cukup umur, net dead-window demand nol → `dead`;
+3. average `>=1.00` → `fast`;
+4. average `>=0.25` → `normal`;
+5. selain itu → `slow`.
+
+`dead_stock_days=0` menonaktifkan dead. Preferred lead time non-null, termasuk nol, mengoverride fallback item.
+Eligible item tanpa movement menghasilkan threshold nol dan kelas slow, kecuali dead override terpenuhi.
+
+Recalculation sources:
+
+- after-commit event untuk `sale|sale_void|customer_return`;
+- perubahan preferred supplier/lead time atau item lead/safety/mode;
+- perubahan tenant dead days untuk seluruh item aktif tenant;
+- daily sweep untuk aging, window shift, dan recovery;
+- explicit `ApplySmartThresholdAction` dari endpoint/UI.
+
+Daily sweep memproses tenant/item secara chunk. Job harus idempotent dan boleh dikoaleskan per item. Kegagalan analytics tidak me-rollback transaksi POS yang sudah committed.
+
+Seluruh item aktif memperoleh persisted class/timestamp saat recalculation berhasil, termasuk item bermode manual. Hanya persistence `stok_minimal` yang dibatasi ke `auto_velocity`.
+
+Explicit apply melakukan ownership validation lalu menghitung dan menyimpan konfigurasi, threshold, class, serta calculation timestamp secara atomik. Item ineligible menghasilkan HTTP 422 tanpa mutation.
+
+---
+
 ## 14. Trial Invariant
 
 `CreateSubscriptionAction` harus:
@@ -562,7 +633,7 @@ Full tenant capabilities.
 
 ### Staff
 
-POS + allowed stock operations.
+POS + allowed stock operations. Mulai Fase 8, insight analytics hanya read-only dan tidak boleh membawa cost, margin, valuation, profit, atau billing.
 
 ### Super Admin
 
@@ -583,6 +654,8 @@ Authorization harus melalui Policy/permission gate.
 - money calculation;
 - MAC;
 - threshold;
+- Net POS demand dan classification boundary;
+- analytics eligibility/dead override;
 - return quantity;
 - refund amount;
 - state transition.
@@ -594,6 +667,8 @@ Authorization harus melalui Policy/permission gate.
 - billing;
 - onboarding;
 - deletion request.
+- Smart Threshold apply dan no-mutation 422.
+- analytics after-commit job dan daily sweep.
 
 ### Integration
 
@@ -613,6 +688,7 @@ Authorization harus melalui Policy/permission gate.
 - tenant isolation;
 - ownership guard;
 - role visibility;
+- analytics tenant isolation dan Staff financial-field exclusion;
 - impersonation audit.
 
 ---
@@ -625,6 +701,7 @@ Authorization harus melalui Policy/permission gate.
 - queue worker.
 - Horizon.
 - scheduled jobs.
+- daily analytics sweep.
 - backup.
 - restore verification.
 - billing webhook endpoint monitoring setelah Fase 11.

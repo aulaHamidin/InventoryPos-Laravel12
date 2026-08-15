@@ -171,7 +171,6 @@ Akses support terhadap data tenant selalu tercatat.
 - Weighted Moving Average.
 - Lifetime license.
 - Refund otomatis payment gateway pada v1.
-- Payment method transfer pada POS sampai workflow bisnisnya didefinisikan.
 - Microservices/CQRS/Event Sourcing penuh.
 
 ---
@@ -345,7 +344,22 @@ Shopping list tidak boleh menebak supplier dari movement terakhir.
 
 Jika preferred supplier belum ada, item masuk shopping list dengan supplier kosong dan harus ditentukan owner sebelum submit.
 
-### 6.10 Trial
+### 6.10 Analytics dan Smart Threshold
+
+- Demand menggunakan Net POS: `max(0, sale - sale_void - customer_return)`.
+- Window velocity memakai zona waktu bisnis `Asia/Jakarta`, half-open `[as_of - 30×24 jam, as_of)`, dan denominator tetap 30.
+- Item dengan histori kurang dari 30×24 jam berstatus `unclassified`; tidak ada prorata hari aktif.
+- Ambang: fast `>=1.00`, normal `>=0.25 dan <1.00`, slow `<0.25` unit/hari.
+- Dead mengoverride velocity jika item cukup umur dan Net POS demand selama `tenant.dead_stock_days` nol.
+- `dead_stock_days=0` menonaktifkan klasifikasi dead.
+- Smart Threshold memakai preferred supplier lead time non-null, termasuk nol, lalu fallback item lead time, ditambah safety stock days.
+- Item eligible tanpa movement menghasilkan threshold `0` dan kelas `slow`, kecuali memenuhi dead override.
+- History yang belum cukup tidak boleh mengubah threshold manual.
+- Recalculation terjadi setelah commit movement demand, perubahan input terkait, daily sweep, dan explicit Smart Threshold action.
+- Klasifikasi dipersist untuk seluruh item aktif; update otomatis `stok_minimal` hanya berlaku pada mode `auto_velocity`.
+- Analytics adalah insight operasional sederhana, bukan forecasting statistik.
+
+### 6.11 Trial
 
 Trial adalah 14 hari.
 
