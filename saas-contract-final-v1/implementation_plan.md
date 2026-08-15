@@ -19,6 +19,8 @@
 
 ## Dependency Graph & Parallelization
 
+> Rencana induk, decision gate, test matrix, visual gate, dan exit checklist Fase 5–12 tersedia di [`master-plan-fase-5-12.md`](master-plan-fase-5-12.md). Eksekusi repository dilakukan satu fase per satu fase dan setiap fase wajib ditutup oleh CI sebelum fase berikutnya dimulai.
+
 ```mermaid
 graph TD
     F0["Fase 0: Fondasi"]
