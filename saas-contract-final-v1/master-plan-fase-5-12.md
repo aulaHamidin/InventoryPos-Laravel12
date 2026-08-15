@@ -41,7 +41,7 @@ Source of truth tetap mengikuti urutan:
 ```mermaid
 flowchart LR
     F04["Fase 0–4\nSELESAI"] --> F5["Fase 5\nCycle Counting\nSELESAI"]
-    F5 --> F6["Fase 6\nPOS Lengkap & QRIS"]
+    F5 --> F6["Fase 6\nPOS Lengkap & Manual Non-Tunai"]
     F6 --> F7["Fase 7\nAnalytics & Threshold"]
     F7 --> F8["Fase 8\nStaff & Multi-Kasir"]
     F8 --> F9["Fase 9\nHardening & Pilot"]
@@ -123,12 +123,12 @@ Empat area belum memiliki detail yang cukup untuk diimplementasikan tanpa keputu
 
 | Gate | Kekosongan kontrak | Tindakan wajib |
 |---|---|---|
-| CD-6.1 | DDD belum mengunci bentuk penyimpanan metadata QR aktif/kedaluwarsa dan referensi QR lama | Audit schema aktual; ajukan Document Delta untuk kolom provider atau tabel payment attempt jika dibutuhkan |
+| CD-6.1 | Kontrak lama mengunci Midtrans POS tetapi kebutuhan produk adalah pencatatan manual | Ditutup oleh `document-delta-f6-pos-manual-payment.md`; Midtrans tetap hanya untuk billing F11 |
 | CD-7.1 | Batas numerik klasifikasi `fast`, `normal`, `slow`, `dead` dan jenis movement yang dihitung belum eksplisit | Ajukan Document Delta yang menetapkan algoritme deterministik; `tenant.dead_stock_days` tetap menjadi input dead stock |
 | CD-10.1 | Capability matrix subscription `trial/active/past_due/suspended/expired` diwajibkan tetapi belum dirinci | Ajukan matrix read/write/login/billing yang eksplisit tanpa mencampur `tenants.operational_status` |
 | CD-11.1 | Provider, expiry, retry, attempt limit, rate limit, dan penyimpanan OTP belum dikunci | Ajukan Document Delta keamanan OTP; jangan menambah tabel/endpoint di luar API contract tanpa persetujuan |
 
-Semua mapping event Midtrans juga harus dibekukan terhadap dokumentasi provider yang berlaku saat fase dijalankan. Secret provider tidak boleh disimpan di repository atau evidence.
+Mapping Midtrans hanya berlaku pada billing Fase 11. POS Fase 6 tidak memiliki provider secret, webhook, atau reconciliation eksternal.
 
 ---
 
@@ -197,84 +197,82 @@ Menyediakan stock opname parsial per rak dan full count yang tetap konsisten saa
 
 ---
 
-## 6. Fase 6 — Smart POS Lengkap & QRIS
+## 6. Fase 6 — POS Lengkap & Pembayaran Manual Non-Tunai
 
 ### 6.1 Sasaran
 
-Melengkapi POS dengan QRIS Midtrans, reconciliation tanpa stock reservation, lifecycle payment terpisah, void, partial return, manual refund, dan print fallback yang aman.
+Melengkapi POS dengan cash, QRIS statis, transfer manual, expiry checkout umum, lifecycle payment terpisah, void, partial return, cumulative refund, histori/laporan, dan print fallback yang aman.
 
 ### 6.2 Entry gate
 
 - Fase 5 selesai.
-- Akun dan credential Midtrans sandbox tersedia melalui environment.
-- CD-6.1 selesai jika schema baseline tidak dapat menyimpan seluruh riwayat QR/reference yang diperlukan.
-- Webhook sandbox dapat mencapai environment pengujian atau tersedia fixture integration yang setara.
+- Document Delta F6 disetujui dan seluruh source of truth tersinkron.
+- `POS_PENDING_TRANSACTION_EXPIRY_HOURS=24` dan `POS_BLUETOOTH_PRINT_ENABLED=false` menjadi default.
 
 ### 6.3 Deliverable
 
 **Payment domain**
 
-- Lengkapi `pos_payments` sesuai DDD tanpa mencampurnya dengan `billing_payments`.
+- Lengkapi `pos_payments` dengan `transfer`, confirmer, manual reference, dan note tanpa mencampurnya dengan `billing_payments`.
 - Pertahankan transaction lifecycle dan payment lifecycle sebagai dua state machine terpisah.
-- `GenerateQrisAction`: idempotency key, reuse QR aktif, replace QR expired, unique gateway reference, dan tetap dapat merekonsiliasi late webhook.
-- Adapter/service Midtrans menjadi satu-satunya boundary komunikasi provider.
-- `HandleMidtransWebhookAction`: signature verification, provider reference resolution, duplicate-safe, out-of-order-safe, dan state validation sebelum mutation.
+- `ConfirmManualPaymentAction`: idempotency key, canonical payload comparison, unique-key race safe, dan Owner confirmation.
+- `ExpirePendingPosTransactionAction`: lock transaction dan expire checkout berumur minimal 24 jam.
 - `FinalizePosTransactionAction`: lock transaction, lock item ascending, revalidate stock, lalu `completed` atau `refund_required`.
-- Tidak ada stock reservation ketika QR dibuat.
+- Tidak ada stock reservation dan tidak ada provider POS.
 
 **Void, return, refund**
 
-- `VoidTransactionAction`: hanya state legal, tidak ada return terdahulu, reversal movement, dan payment obligation sesuai cash/QRIS.
-- `PartialReturnAction`: berbasis transaksi asli, cumulative returned quantity tidak melebihi sold quantity, customer-return movement, refund amount dari net line amount.
-- `MarkRefundedAction`: Owner-only, actor/timestamp/note tercatat, total refunded tidak melebihi payment amount.
-- Refund v1 tetap manual; aplikasi tidak memanggil automated refund Midtrans.
+- `VoidTransactionAction`: hanya state legal, tidak ada return terdahulu, `sale_void` movements, dan full refund obligation semua metode.
+- `PartialReturnAction`: cumulative quantity aman, customer-return movements, dan cumulative exact net-line obligation.
+- `MarkRefundedAction`: Owner-only, cumulative refunded amount, actor/timestamp/note, obligation dan due invariant.
+- Refund seluruh metode tetap manual.
 
 **API dan UI**
 
-- Generate QR, poll/check status, webhook POS Midtrans, void, return, dan mark-refunded sesuai API specification.
-- UI QRIS memiliki state: creating, QR ready, waiting, timeout/network unknown, paid/finalizing, completed, dan refund required.
-- Network failure menawarkan “Periksa Status Pembayaran”, bukan membuat pembayaran baru.
+- `pay-manual`, status, void, return, dan mark-refunded sesuai API specification.
+- UI menawarkan Cash, QRIS Statis, dan Transfer Bank dengan explicit manual-verification warning.
+- Histori/detail/receipt/export/laporan menampilkan metode, confirmation, payment status, obligation, refund, dan due sesuai permission.
 - Refund-required tidak menawarkan “Bayar Lagi”.
 - Void, return, dan mark refunded memakai confirmation yang menjelaskan konsekuensi.
-- Web Bluetooth printing jika didukung; fallback ke print dialog/PDF bila tidak didukung atau gagal.
+- Web Bluetooth beta default nonaktif; print dialog/PDF adalah fallback resmi.
 
 ### 6.4 Release-blocker tests
 
-Seluruh delapan skenario roadmap harus lulus:
+Seluruh sepuluh skenario roadmap harus lulus:
 
-1. Customer membayar dan stok tersedia → transaction completed.
-2. Customer membayar dan stok sudah berkurang → transaction/payment refund_required.
-3. Webhook sama dua kali → hanya satu sale movement.
-4. Paid webhook datang setelah local expiry → reconciliation tanpa duplicate sale.
-5. Retry generate QR → QR/payment attempt aktif yang sama.
-6. Completed QRIS lalu void → refund obligation tercatat.
-7. Partial return QRIS → partial refund obligation sesuai net line amount.
-8. Bluetooth tidak didukung → print dialog fallback tersedia.
+1. QRIS manual dan stok tersedia → completed.
+2. Transfer manual dan stok tersedia → completed.
+3. Dana diterima tetapi stok gagal → refund_required tanpa sale movement.
+4. Duplicate manual confirmation → satu payment/movement.
+5. Concurrent cash vs manual → tepat satu diterapkan.
+6. Void semua metode → full refund obligation.
+7. Partial return → cumulative exact refund dan due benar.
+8. Bluetooth unsupported → print dialog/PDF fallback.
+9. Pending melewati TTL → expired dan tidak dapat dibayar.
+10. Histori/export/receipt menampilkan metode benar.
 
 Tambahan wajib:
 
-- invalid signature ditolak tanpa mutation;
-- out-of-order paid/expired tidak melakukan illegal transition;
 - cross-tenant transaction/payment ID menghasilkan 404;
-- concurrent webhook/void/return aman terhadap duplicate movement;
-- refunded amount invariant lulus;
-- UI tidak pernah menganggap QR tampil sebagai payment success.
+- same-key cross-transaction dan unique-key race menghasilkan conflict, bukan HTTP 500;
+- concurrent payment/void/return aman terhadap duplicate movement;
+- refund obligation/refunded/due invariant lulus;
+- Staff tidak menerima financial report/export.
 
 ### 6.5 Visual/runtime gate
 
-- Jalankan QRIS sandbox end-to-end bila credential tersedia.
-- Walkthrough desktop dan mobile untuk success, timeout, retry status, stock conflict, manual refund, return, void, receipt.
-- Uji browser dengan dan tanpa Web Bluetooth.
-- Sanitasi seluruh evidence dari token, signature, nomor sensitif, dan secret.
-- Evidence disimpan di `docs/evidence/f6-qris-pos-YYYY-MM-DD/`.
+- Walkthrough desktop/mobile untuk cash, QRIS, transfer, expiry, stock conflict, refund, return, void, history, receipt, dan export.
+- Uji browser tanpa Web Bluetooth dan mock seluruh transport branch.
+- Hardware smoke test conditional; flag tetap false tanpa evidence perangkat nyata.
+- Evidence disimpan di `docs/evidence/f6-pos-manual-payment-YYYY-MM-DD/`.
 
 ### 6.6 Exit checklist
 
-- [ ] CD-6.1 ditutup bila diperlukan.
-- [ ] Delapan release-blocker tests lulus.
-- [ ] Integration/security/concurrency tests lulus.
-- [ ] QRIS sandbox dan print fallback terverifikasi.
-- [ ] Visual evidence lengkap.
+- [x] CD-6.1 ditutup oleh Document Delta F6.
+- [x] Sepuluh release-blocker tests lulus.
+- [x] Integration/security/concurrency tests lulus.
+- [x] Histori/report/export dan print fallback terverifikasi.
+- [x] Visual evidence lengkap.
 - [ ] Full quality gate dan CI remote hijau.
 - [ ] Fase 6 ditandai selesai.
 
@@ -364,7 +362,7 @@ Mengaktifkan login Staff/Kasir pada `/app/login`, menyediakan workflow pengelola
 **Multi-kasir**
 
 - Cashier ID selalu berasal dari user terautentikasi.
-- Concurrent checkout/pay/QRIS pada item yang sama tetap memakai lock ordering dan stock invariant.
+- Concurrent checkout/cash/manual non-tunai pada item yang sama tetap memakai lock ordering dan stock invariant.
 - Idempotency key bersifat tenant-scoped dan tidak tertukar antar kasir.
 - Audit mencatat actor Staff untuk seluruh mutation yang diizinkan.
 
@@ -374,7 +372,7 @@ Mengaktifkan login Staff/Kasir pada `/app/login`, menyediakan workflow pengelola
 - Staff berhasil login di `/app/login` dan ditolak di `/admin/login`.
 - Direct HTTP/API access untuk setiap area terlarang menghasilkan 403/404 yang tepat.
 - HTML, JSON, export, print, dan private file tidak mengandung field finansial.
-- Staff dapat menjalankan POS cash dan QRIS sesuai permission.
+- Staff dapat menjalankan POS cash, QRIS statis, dan transfer sesuai permission Fase 8.
 - Staff tidak dapat void/return/refund/billing/staff management.
 - Dua atau lebih kasir melakukan transaksi paralel tanpa negative stock atau duplicate movement.
 - Deactivated Staff kehilangan akses pada sesi/request berikutnya sesuai policy.
@@ -407,13 +405,13 @@ Membuktikan aplikasi Fase 0–8 tahan terhadap beban, race, penyalahgunaan umum,
 
 **Performance dan resilience**
 
-- Script load test versioned untuk login/session, item search/scan, checkout cash, concurrent stock mutation, QR status, dan webhook flood.
+- Script load test versioned untuk login/session, item search/scan, checkout cash/manual, expiry race, dan concurrent stock mutation.
 - Profiling query/queue serta batas performa dicatat bersama environment test; tidak membuat klaim angka tanpa baseline.
 - Retry/idempotency dan queue failure behavior diuji.
 
 **Security review**
 
-- Tenant isolation, ownership guard, mass assignment, authorization, CSRF/session, webhook signature, rate limiting, private file, secret management, log redaction, dan dependency audit.
+- Tenant isolation, ownership guard, mass assignment, authorization, CSRF/session, billing-webhook signature, rate limiting, private file, secret management, log redaction, dan dependency audit.
 - Support/admin boundary diperiksa walaupun resource Fase 10 belum aktif.
 - Tidak ada secret atau data tenant nyata di repository/evidence.
 
@@ -549,7 +547,7 @@ Memungkinkan Owner mendaftar sendiri, memverifikasi nomor dengan OTP, memperoleh
 
 - Billing page membaca subscription/invoice dari backend state.
 - `POST /api/v1/billing/invoices/{id}/pay` memakai idempotency key dan server amount.
-- `POST /api/v1/webhooks/midtrans-billing` terpisah total dari webhook POS.
+- `POST /api/v1/webhooks/midtrans-billing` hanya memproses billing dan tidak memiliki pasangan webhook POS.
 - Handler billing memverifikasi signature/reference/state, duplicate-safe, dan out-of-order-safe.
 - Payment valid membuat tepat satu transition subscription dan satu immutable subscription event.
 - Payment gagal/kedaluwarsa tidak mengaktifkan subscription.
@@ -571,7 +569,7 @@ Memungkinkan Owner mendaftar sendiri, memverifikasi nomor dengan OTP, memperoleh
 - Duplicate billing webhook → satu payment transition/event.
 - Out-of-order paid/expired/failed mengikuti legal state.
 - Client tidak dapat mengubah invoice amount, tenant, plan, atau status.
-- POS webhook tidak dapat memproses billing reference dan sebaliknya.
+- Endpoint billing webhook tidak dapat memproses POS payment.
 - Payment success menghasilkan tepat satu subscription transition.
 - Trial/active/past_due/suspended/expired capability mengikuti CD-10.1.
 
@@ -610,10 +608,10 @@ Membuat kegagalan aplikasi, queue, webhook, audit, dan backup terlihat serta dap
 - Health checks untuk aplikasi, database, Redis/queue, storage, dan scheduler.
 - Correlation/request ID untuk menelusuri request → Action/job → webhook/audit tanpa mencatat secret.
 
-**Webhook dan billing/POS monitoring**
+**Billing webhook dan POS operational monitoring**
 
-- Dashboard/metric terpisah untuk webhook POS dan billing.
-- Monitor invalid signature, unknown reference, duplicate, out-of-order, processing failure, reconciliation, serta `refund_required` yang belum selesai.
+- Monitor billing webhook untuk invalid signature, unknown reference, duplicate, out-of-order, dan processing failure.
+- Monitor POS pending expiry, idempotency conflict, dan `refund_required` yang belum selesai tanpa membuat webhook POS.
 - Alert tidak mengubah business state; recovery tetap melalui Action/admin workflow.
 
 **Alerting, audit, backup**
@@ -621,14 +619,14 @@ Membuat kegagalan aplikasi, queue, webhook, audit, dan backup terlihat serta dap
 - Alert route dan severity untuk application error, queue backlog/failure, webhook failure, backup failure, dan security-relevant anomaly.
 - Admin audit review page dengan filter actor/action/tenant/time tanpa mutation histori.
 - Scheduled backup verification dan restore drill berkala dengan evidence/checksum.
-- Runbook alert triage, queue recovery, webhook replay/reconciliation, refund-required, backup restore, dan incident escalation.
+- Runbook alert triage, queue recovery, billing-webhook replay/reconciliation, POS refund-required, backup restore, dan incident escalation.
 - Retention/redaction policy diterapkan pada log, Telescope, audit, dan backup.
 
 ### 12.3 Test dan operational gate
 
 - Simulasikan application exception dan pastikan alert diterima tanpa secret leak.
 - Simulasikan failed/retried job dan verifikasi Horizon/alert.
-- Simulasikan invalid, duplicate, out-of-order, dan failed webhook POS/billing.
+- Simulasikan invalid, duplicate, out-of-order, dan failed billing webhook serta POS expiry/refund-required.
 - Simulasikan backup verification gagal dan berhasil.
 - Verifikasi scheduler/worker restart serta health check.
 - Verifikasi audit review hanya untuk Admin berwenang dan Support read-only.
@@ -639,7 +637,7 @@ Membuat kegagalan aplikasi, queue, webhook, audit, dan backup terlihat serta dap
 
 - Telescope staging access restriction.
 - Horizon dashboard dan failed-job recovery.
-- Webhook monitoring POS vs billing.
+- Billing webhook dan POS operational monitoring.
 - Audit review serta alert evidence.
 - Backup verification/restore report.
 - Evidence disimpan di `docs/evidence/f12-observability-YYYY-MM-DD/` dan bebas secret/PII sensitif.
@@ -706,7 +704,7 @@ Evidence tidak boleh memuat `.env`, secret, access token, OTP nyata, webhook sig
 ### Execution
 
 - [x] Fase 5 — Cycle Counting.
-- [ ] Fase 6 — Smart POS Lengkap & QRIS.
+- [ ] Fase 6 — POS Lengkap & Pembayaran Manual Non-Tunai.
 - [ ] Fase 7 — Analytics & Smart Threshold.
 - [ ] Fase 8 — Staff & Multi-Kasir.
 - [ ] Fase 9 — Hardening & Pilot.
@@ -726,4 +724,4 @@ Evidence tidak boleh memuat `.env`, secret, access token, OTP nyata, webhook sig
 
 ## 16. Langkah Berikutnya
 
-Fase 5 telah ditutup. Langkah berikutnya adalah membuat **implementation plan rinci Fase 6**, menutup CD-6.1 bila schema QRIS membutuhkan struktur provider/payment-attempt tambahan, lalu menjalankan implementasi Smart POS Lengkap & QRIS sesuai release-blocker gate.
+Fase 5 telah ditutup dan Document Delta F6 disetujui. Langkah berikutnya adalah menjalankan `implementation-plan-fase-6.md` untuk POS manual non-tunai, expiry, refund, histori/reporting, dan print fallback sesuai release-blocker gate.

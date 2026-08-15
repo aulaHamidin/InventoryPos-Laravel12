@@ -162,33 +162,34 @@ Staff tidak melihat financial data.
 
 ---
 
-## 8. Fase 6 — Smart POS Lengkap & QRIS
+## 8. Fase 6 — POS Lengkap & Pembayaran Manual Non-Tunai
 
 ### Scope
 
-- perluasan `pos_payments` Fase 2 untuk QRIS, webhook, dan refund;
-- Midtrans QRIS;
-- QR idempotency;
-- webhook signature verification;
-- duplicate webhook;
-- out-of-order webhook;
+- perluasan `pos_payments` Fase 2 untuk `qris|transfer`, metadata konfirmasi, dan refund;
+- QRIS statis dan transfer manual;
+- manual payment idempotency/unique-key race;
+- pending checkout expiry 24 jam;
 - refund_required;
 - manual refund marking;
 - void;
 - partial return;
+- histori, receipt, laporan, dan export per metode;
 - Bluetooth print;
 - print fallback.
 
 ### Release blocker tests
 
-1. Customer pays, stock remains available → completed.
-2. Customer pays, stock disappears → refund_required.
-3. Same webhook twice → one sale movement.
-4. Paid webhook after local expiry → reconciliation, no illegal duplicate sale.
-5. QR generation retry → same active QR/payment attempt.
-6. QRIS completed then void → refund required.
-7. QRIS partial return → partial refund obligation.
-8. Bluetooth unsupported → print dialog.
+1. Manual QRIS paid, stock remains available → completed.
+2. Manual transfer paid, stock remains available → completed.
+3. Payment confirmed, stock disappears → refund_required.
+4. Duplicate confirmation → one payment/movement.
+5. Concurrent cash vs manual payment → exactly one applied.
+6. Void all methods → full refund obligation.
+7. Partial return → cumulative exact refund and correct due.
+8. Bluetooth unsupported → print dialog/PDF fallback.
+9. Pending transaction passes TTL → expired and cannot be paid.
+10. History/export/receipt show the correct method.
 
 ---
 

@@ -45,8 +45,7 @@ Endpoint command yang dapat di-retry wajib menerima:
 Minimal:
 
 - POST `/pos/checkout`
-- POST `/pos/transactions/{id}/qris/generate`
-- webhook payment processing menggunakan provider reference/idempotency rule
+- POST `/pos/transactions/{id}/pay-manual`
 - subscription payment creation jika endpoint command tersebut tersedia
 
 Duplicate request harus menghasilkan hasil business operation yang sama, bukan record ganda.
@@ -222,21 +221,32 @@ Response:
 }
 ```
 
-### `POST /pos/transactions/{id}/qris/generate`
+### `POST /pos/transactions/{id}/pay-manual`
 
 Header:
 
 `Idempotency-Key`
 
-Body kosong.
+Request:
+
+```json
+{
+  "method": "qris",
+  "reference": null,
+  "note": "Diperiksa melalui aplikasi merchant"
+}
+```
 
 Rules:
 
-- transaction must be pending;
-- no client amount;
-- active QR is reused;
-- expired QR may be replaced;
-- gateway reference stored.
+- method hanya `qris|transfer`;
+- transaction harus pending dan belum melewati TTL 24 jam;
+- no client amount/tenant/actor/status;
+- operator memverifikasi media toko secara manual;
+- reference maksimal 255 dan note maksimal 1000;
+- whitespace-only dinormalisasi null;
+- key sama/payload sama mengembalikan hasil lama;
+- key sama/transaction atau payload berbeda → `IDEMPOTENCY_CONFLICT`.
 
 Response:
 
@@ -244,9 +254,15 @@ Response:
 {
   "status": "success",
   "data": {
-    "qris_reference": "MIDTRANS-123",
-    "qr_image_url": "...",
-    "expires_at": "2026-08-10T10:15:00Z"
+    "transaction_id": 104,
+    "transaction_status": "completed",
+    "payment_id": 10,
+    "payment_status": "paid",
+    "method": "qris",
+    "amount": 95000,
+    "confirmed_by": 21,
+    "paid_at": "2026-08-10T10:15:00Z",
+    "requires_refund": false
   }
 }
 ```
@@ -262,28 +278,19 @@ Response:
     "transaction_status": "pending_payment",
     "payment": {
       "method": "qris",
-      "status": "pending"
+      "status": "paid",
+      "amount": 95000,
+      "confirmed_by": 21,
+      "manual_reference": null,
+      "refunded_amount": 0,
+      "refund_obligation_amount": 0,
+      "refund_due_amount": 0
     }
   }
 }
 ```
 
 Transaction status dan payment status dikembalikan sebagai dua field berbeda.
-
-### `POST /webhooks/midtrans`
-
-Internal provider endpoint.
-
-Wajib:
-
-- verify signature;
-- resolve gateway reference;
-- idempotency;
-- state validation;
-- duplicate safe;
-- out-of-order safe.
-
-Provider webhook tidak menerima Bearer token dari tenant client.
 
 ### `POST /pos/transactions/{id}/void`
 
@@ -295,9 +302,7 @@ Request:
 }
 ```
 
-Jika QRIS payment sudah paid:
-
-response menunjukkan refund required/payment status.
+Jika payment cash/QRIS/transfer sudah paid, response menunjukkan refund required/payment status.
 
 ### `POST /pos/transactions/{id}/return`
 
@@ -330,14 +335,14 @@ Request:
 ```json
 {
   "refunded_amount": 95000,
-  "note": "Refund manual via Midtrans"
+  "note": "Pengembalian dana telah dilakukan"
 }
 ```
 
 Validation:
 
 - payment must be `refund_required` or `partially_refunded`;
-- refunded amount cannot exceed amount;
+- refunded amount cumulative tidak boleh turun atau melebihi obligation/amount;
 - actor must be authorized.
 
 Response:
@@ -578,7 +583,6 @@ Minimum:
 - `ITEM_INACTIVE`
 - `INVALID_STATE_TRANSITION`
 - `IDEMPOTENCY_CONFLICT`
-- `QR_ALREADY_ACTIVE`
 - `PAYMENT_NOT_FOUND`
 - `PAYMENT_ALREADY_REFUNDED`
 - `REFUND_AMOUNT_EXCEEDED`

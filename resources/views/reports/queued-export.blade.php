@@ -14,6 +14,17 @@
 <body>
 <h1>{{ $title }}</h1>
 <p>Dibuat {{ now()->format('Y-m-d H:i') }}</p>
+@if (!empty($summaries))
+    <h2>Ringkasan operasional per metode</h2>
+    <table style="margin-bottom: 16px">
+        <thead><tr><th>Metode</th><th>Jumlah Payment</th><th>Total Payment</th><th>Refund Tercatat</th><th>Net Operasional</th></tr></thead>
+        <tbody>
+        @foreach ($summaries as $summary)
+            <tr>@foreach ($summary as $value)<td>{{ $value }}</td>@endforeach</tr>
+        @endforeach
+        </tbody>
+    </table>
+@endif
 <table>
     <thead><tr>@foreach ($headings as $heading)<th>{{ $heading }}</th>@endforeach</tr></thead>
     <tbody>

@@ -64,13 +64,14 @@ Jika terdapat konflik, agent harus:
 - Server menghitung total.
 - Checkout idempotent.
 - Cash finalize dengan stock revalidation.
-- QRIS menggunakan Midtrans.
-- QR generation idempotent.
+- QRIS POS bersifat statis/manual milik toko; transfer juga dikonfirmasi manual.
+- Konfirmasi non-tunai wajib idempotent dan actor berasal dari authenticated identity.
 - Tidak ada stock reservation v1.
-- Paid QRIS selalu revalidate stock.
+- Payment manual yang telah diterima selalu revalidate stock.
 - Stock gagal setelah payment → `refund_required`.
-- Refund v1 manual.
-- Duplicate/out-of-order webhook harus aman.
+- Refund seluruh metode POS bersifat manual dan cumulative.
+- Pending checkout lebih dari 24 jam → `expired` dan tidak dapat dibayar.
+- Midtrans hanya digunakan untuk billing Fase 11, bukan POS.
 
 ### Payment
 
@@ -270,10 +271,10 @@ harus memiliki definisi eksplisit.
 | Stock | Race Condition |
 | Multi-item stock | Lock Ordering |
 | POS | Idempotency |
-| QRIS | Signature |
-| QRIS | Duplicate Webhook |
-| QRIS | Out-of-order Webhook |
-| QRIS | Payment-stock reconciliation |
+| POS manual payment | Duplicate/unique-key race |
+| POS manual payment | Cash-vs-non-cash concurrency |
+| POS pending | Expiry race |
+| POS report | Method/permission isolation |
 | Return | Partial Return |
 | Void | Stock reversal |
 | Refund | Amount invariant |
@@ -297,14 +298,15 @@ Agent tidak boleh:
 - mempercayai total POS dari client;
 - update stock tanpa movement;
 - update stock di listener;
-- membuat QR kedua ketika QR aktif masih valid;
+- menganggap screenshot pelanggan sebagai bukti pembayaran POS;
+- membuat adapter, endpoint, atau state Midtrans POS;
 - finalize payment tanpa state validation;
 - menebak supplier;
 - membuat trial tanpa histori check;
 - delete transaction individual;
 - bypass Action untuk support/admin stock correction;
 - menyembunyikan impersonation;
-- menganggap webhook selalu ordered.
+- menganggap billing webhook selalu ordered.
 
 ---
 

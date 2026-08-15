@@ -134,7 +134,7 @@ Read-only support access sesuai permission.
 ### v1
 
 - staff/kasir;
-- QRIS;
+- QRIS statis dan transfer manual;
 - Bluetooth printing;
 - self-service onboarding;
 - OTP;
@@ -287,24 +287,15 @@ Jika stok tidak cukup:
 - tidak ada external payment;
 - tidak ada refund.
 
-### 9.3 QRIS
+### 9.3 QRIS Statis dan Transfer Manual
 
-`checkout → pending_payment → generate QR → payment → finalize`.
+`checkout → pending_payment → operator confirmation → finalize`.
 
-Tidak ada stock reservation.
+Operator memeriksa aplikasi merchant atau rekening toko. Aplikasi tidak menghasilkan QR, tidak memanggil provider POS, dan tidak menganggap screenshot customer sebagai bukti.
 
-Stok divalidasi:
+Tidak ada stock reservation. Stok divalidasi saat checkout dan saat confirmation. Jika validasi kedua gagal, transaction/payment menjadi `refund_required` tanpa sale movement.
 
-1. saat checkout;
-2. saat payment confirmed.
-
-Jika validasi kedua gagal:
-
-`pos_transaction = refund_required`
-
-dan:
-
-`pos_payment = refund_required`.
+Pending checkout memiliki TTL 24 jam. Setelah expiry, payment ditolak dan checkout baru wajib dibuat.
 
 ---
 
@@ -343,42 +334,11 @@ refunded
 
 Satu transaksi dapat memiliki payment record, tetapi status payment tidak digabung ke status transaction.
 
-### 10.3 QR generation idempotency
+### 10.3 Manual payment idempotency
 
-Jika transaksi sudah memiliki QR aktif dan belum expired:
+`POST pay-manual` wajib memakai `Idempotency-Key` unique per tenant. Key sama dengan transaction/method/reference/note yang sama mengembalikan hasil lama; key sama dengan payload atau transaction berbeda menghasilkan `IDEMPOTENCY_CONFLICT`.
 
-`generate` mengembalikan QR yang sama.
-
-Tidak membuat QR kedua.
-
-Jika request timeout lalu retry:
-
-hasil harus tetap merepresentasikan payment attempt yang sama.
-
-`Idempotency-Key` wajib.
-
-### 10.4 Webhook
-
-Webhook Midtrans wajib:
-
-- signature verified;
-- idempotent;
-- dapat menerima duplicate;
-- dapat menerima event out-of-order;
-- tidak boleh mengubah state secara ilegal.
-
-Contoh:
-
-```text
-pending + paid → finalize
-completed + paid → ignore
-completed + expired → ignore
-expired + paid → reconciliation
-refund_required + paid → ignore
-refunded + paid → ignore
-```
-
-Webhook tidak boleh melakukan business transition tanpa pemeriksaan state saat ini.
+Duplicate key race harus ditangani dari unique constraint tanpa berubah menjadi HTTP 500.
 
 ---
 
@@ -396,13 +356,9 @@ Void:
 4. update transaction status;
 5. create refund obligation bila payment sudah dibayar.
 
-Cash:
+Cash, QRIS, dan transfer:
 
-`owner mengembalikan cash`.
-
-QRIS:
-
-`pos_payment → refund_required`.
+`pos_payment → refund_required`, lalu Owner mencatat pengembalian uang secara manual.
 
 ### Partial return
 
@@ -415,7 +371,7 @@ Status:
 - masih ada item/qty yang belum diretur → `partially_returned`;
 - seluruh qty selesai → `fully_returned`.
 
-QRIS return menghasilkan refund obligation sesuai net line amount.
+Return seluruh metode menghasilkan refund obligation sesuai cumulative net line amount.
 
 Refund v1 manual.
 
@@ -714,8 +670,9 @@ Minimum:
 - stock race condition;
 - deterministic locking;
 - POS idempotency;
-- QR duplicate webhook;
-- QR out-of-order webhook;
+- manual payment duplicate/unique-key race;
+- cash-vs-manual payment concurrency;
+- pending expiry race;
 - payment-stock reconciliation;
 - refund marking;
 - partial return;
@@ -748,4 +705,4 @@ Backup:
 
 Queue failures harus terlihat.
 
-Payment webhook failures harus memiliki monitoring.
+Billing webhook failures harus memiliki monitoring setelah billing gateway aktif.

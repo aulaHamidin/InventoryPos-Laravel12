@@ -3,6 +3,7 @@
     "private": true,
     "type": "module",
     "scripts": {
+        "test": "node --test resources/js/pos/*.test.js",
         "build": "npm run build:app && npm run build:filament",
         "build:app": "vite build",
         "build:filament": "node scripts/build-filament-theme.mjs",

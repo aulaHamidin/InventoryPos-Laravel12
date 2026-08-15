@@ -23,13 +23,28 @@ it('renders the Owner POS scanner and keyboard contract while denying Staff', fu
         ->assertSee("event.key === 'F1'", false)
         ->assertSee("event.key === 'F2'", false)
         ->assertSee("event.key === 'Escape'", false)
+        ->assertSee("event.key === 'Delete'", false)
         ->assertSee('wire:loading.attr="disabled"', false)
         ->assertSee('window.print()', false)
-        ->assertSee('Bayar Tunai (F2)');
+        ->assertSee('Pilih Pembayaran')
+        ->assertDontSee('Bluetooth Beta');
 
     // Livewire update requests run through /livewire/update instead of /app/pos.
     // The persistent middleware must restore the tenant from the session user.
     TenantContext::clear();
+
+    Livewire::actingAs($owner)
+        ->test(PosScreen::class)
+        ->set('cart', [[
+            'item_id' => 1, 'nama' => 'Test', 'kode' => 'TEST', 'harga_jual' => '100.00',
+            'qty' => 1, 'discount_amount' => '0.00', 'subtotal' => '100.00', 'stok_tersedia' => 1,
+        ]])
+        ->set('showPaymentModal', true)
+        ->assertSee('QRIS Statis')
+        ->assertSee('Transfer Bank')
+        ->set('paymentMethod', 'qris')
+        ->assertSee('Saya telah memastikan dana diterima')
+        ->assertSee('tidak diverifikasi otomatis oleh bank');
 
     Livewire::actingAs($owner)
         ->test(PosScreen::class)

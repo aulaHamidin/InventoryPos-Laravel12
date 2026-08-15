@@ -6,7 +6,11 @@ use App\Actions\Opname\CreateOpnameAction;
 use App\Actions\Opname\FinalizeOpnameAction;
 use App\Actions\Opname\SaveOpnameCountAction;
 use App\Actions\Pos\CheckoutPosAction;
+use App\Actions\Pos\ConfirmManualPaymentAction;
+use App\Actions\Pos\ExpirePendingPosTransactionAction;
 use App\Actions\Pos\PayCashAction;
+use App\Actions\Pos\ReturnPosTransactionAction;
+use App\Actions\Pos\VoidPosTransactionAction;
 use App\Actions\Shopping\ReceiveShoppingListAction;
 use App\Exceptions\ApiProblemException;
 use App\Models\Tenant;
@@ -36,6 +40,22 @@ try {
     } elseif ($mode === 'pay') {
         app(PayCashAction::class)->execute((int) $targetId, '250.00', $owner);
         echo 'paid';
+    } elseif ($mode === 'manual') {
+        app(ConfirmManualPaymentAction::class)->execute(
+            (int) $targetId, (string) $value, (string) $key, $owner, null, null,
+        );
+        echo 'manual';
+    } elseif ($mode === 'void') {
+        app(VoidPosTransactionAction::class)->execute((int) $targetId, (string) $key, $owner);
+        echo 'voided';
+    } elseif ($mode === 'return') {
+        app(ReturnPosTransactionAction::class)->execute((int) $targetId, [[
+            'pos_transaction_item_id' => (int) $key,
+            'qty' => (int) $value,
+        ]], $owner);
+        echo 'returned';
+    } elseif ($mode === 'expire') {
+        echo app(ExpirePendingPosTransactionAction::class)->execute((int) $targetId) ? 'expired' : 'skipped';
     } elseif ($mode === 'preferred') {
         app(SetPreferredSupplierAction::class)->execute((int) $targetId, $owner);
         echo 'preferred';

@@ -78,9 +78,8 @@ Contoh:
 | Backend State | UI Representation |
 |---|---|
 | Preparing | Memproses pembayaran |
-| QR Ready | Silakan pindai QR |
-| Waiting Payment | Menunggu pembayaran |
-| Confirmed | Pembayaran diterima |
+| Awaiting Manual Confirmation | Periksa aplikasi merchant/rekening toko |
+| Confirmed | Pembayaran dikonfirmasi manual |
 | Finalizing | Menyelesaikan transaksi |
 | Completed | Transaksi selesai |
 | Refund Required | Pembayaran diterima — refund diperlukan |
@@ -1001,55 +1000,43 @@ UI dapat memberikan preview untuk UX, tetapi hasil final berasal dari backend.
 
 ---
 
-# 28. QRIS Payment
+# 28. QRIS Statis dan Transfer Manual
 
-QRIS menggunakan explicit visual state.
+QRIS/transfer menggunakan explicit manual-confirmation state.
 
 Primary flow:
 
 ```text
-Memproses pembayaran
+Pilih QRIS Statis / Transfer Bank
 ↓
-Silakan pindai QR
+Customer membayar melalui media milik toko
 ↓
-Menunggu pembayaran
+Operator memeriksa aplikasi merchant/rekening
 ↓
-Pembayaran diterima
+Operator menyatakan dana diterima
 ↓
-Menyelesaikan transaksi
+Backend revalidate stok
 ↓
 Transaksi selesai
 ```
 
-UI tidak boleh menganggap QR code yang tampil sebagai bukti pembayaran sukses.
+UI wajib menampilkan:
 
-Pembayaran hanya dianggap sukses berdasarkan state backend.
+> Pembayaran dikonfirmasi manual oleh operator berwenang dan tidak diverifikasi otomatis oleh bank. Jangan hanya mengandalkan screenshot pelanggan.
 
----
-
-# 29. QRIS Network Failure
-
-Jika terjadi timeout/network error setelah payment request:
+Operator harus mencentang confirmation berikut sebelum submit:
 
 ```text
-⚠ Koneksi terputus
-
-Pembayaran mungkin sudah diproses.
-
-Jangan membuat pembayaran baru.
-
-[Periksa Status Pembayaran]
+[ ] Saya telah memastikan dana diterima
 ```
 
-Tidak boleh ada automatic duplicate payment.
-
-User harus dapat memeriksa status payment berdasarkan backend.
+Tidak ada QR generation, polling, countdown, provider state, atau automatic verification pada POS.
 
 ---
 
-# 30. QRIS Stock Conflict
+# 29. Manual Payment Stock Conflict
 
-Sistem tidak menggunakan stock reservation untuk flow QRIS ini.
+Sistem tidak menggunakan stock reservation untuk flow pembayaran manual.
 
 Jika payment diterima tetapi validasi stok final gagal:
 
@@ -1081,9 +1068,9 @@ Tujuannya mencegah duplicate payment.
 
 ---
 
-# 31. Manual Refund
+# 30. Manual Refund
 
-Refund QRIS pada flow ini adalah manual.
+Refund cash, QRIS, dan transfer pada flow ini adalah manual.
 
 UI harus membedakan:
 
@@ -2014,8 +2001,9 @@ Minimum test scenario:
 - cart quantity;
 - cash payment;
 - QRIS payment;
-- payment timeout;
-- payment confirmed;
+- transfer payment;
+- manual confirmation;
+- pending transaction expiry;
 - stock conflict;
 - refund required;
 - void;
@@ -2082,8 +2070,9 @@ POS dianggap selesai apabila:
 - cart dapat diedit dengan cepat;
 - keyboard shortcut bekerja;
 - cash workflow jelas;
-- QRIS state jelas;
-- payment timeout tidak menyebabkan duplicate payment;
+- manual QRIS/transfer state jelas;
+- duplicate confirmation tidak menyebabkan duplicate payment;
+- expired checkout tidak dapat dibayar;
 - stock conflict memiliki recovery state;
 - refund-required state tidak dapat disalahartikan sebagai completed;
 - transaction success memiliki final confirmation.

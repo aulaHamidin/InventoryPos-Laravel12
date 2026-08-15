@@ -8,6 +8,7 @@ use App\Models\Concerns\PreventsHistoricalDeletion;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class PosTransaction extends Model
 {
@@ -44,5 +45,22 @@ class PosTransaction extends Model
     public function payments(): HasMany
     {
         return $this->hasMany(PosPayment::class);
+    }
+
+    public function payment(): HasOne
+    {
+        return $this->hasOne(PosPayment::class)->latestOfMany();
+    }
+
+    public function stockMovements(): HasMany
+    {
+        return $this->hasMany(StockMovement::class, 'reference_id')
+            ->where('reference_type', self::class);
+    }
+
+    public function auditLogs(): HasMany
+    {
+        return $this->hasMany(AuditLog::class, 'subject_id')
+            ->where('subject_type', self::class);
     }
 }

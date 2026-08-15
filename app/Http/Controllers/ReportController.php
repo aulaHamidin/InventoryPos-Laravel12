@@ -26,6 +26,7 @@ class ReportController extends Controller
             'filters.category_id' => ['nullable', 'integer'],
             'filters.movement_type' => ['nullable', 'string'],
             'filters.status' => ['nullable', 'string'],
+            'filters.payment_method' => ['nullable', 'in:cash,qris,transfer'],
             'filters.low_stock' => ['nullable', 'boolean'],
         ]);
 

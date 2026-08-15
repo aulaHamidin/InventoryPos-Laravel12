@@ -135,7 +135,8 @@ Akses support terhadap data tenant selalu tercatat.
 - Full opname sebagai opsi.
 - Smart POS.
 - Cash payment.
-- QRIS dinamis Midtrans.
+- QRIS statis/manual milik toko.
+- Transfer bank manual.
 - Partial return.
 - Void.
 - Manual refund workflow.
@@ -222,7 +223,7 @@ POS wajib:
 - mendukung diskon per baris;
 - menghitung total di server;
 - mendukung cash;
-- mendukung QRIS;
+- mendukung QRIS statis dan transfer manual;
 - mendukung void;
 - mendukung partial return;
 - mempertahankan histori transaksi.
@@ -241,27 +242,25 @@ Lifecycle transaksi dan lifecycle uang adalah dua konsep berbeda.
 
 > uang transaksi berada di tahap apa?
 
-QRIS menggunakan Midtrans.
+QRIS POS adalah QRIS statis/manual milik toko dan transfer adalah transfer bank manual. Operator berwenang memeriksa aplikasi merchant atau rekening toko sebelum mengonfirmasi dana diterima. Aplikasi tidak memverifikasi bank/provider dan screenshot pelanggan bukan bukti pembayaran.
 
-Refund v1 dilakukan manual pada dashboard gateway. Owner kemudian menandai refund telah selesai di aplikasi.
+Refund cash, QRIS, dan transfer dicatat manual oleh Owner di aplikasi. Midtrans hanya digunakan untuk billing SaaS Fase 11.
 
-### 6.5 QRIS tanpa reservation
+### 6.5 Pembayaran manual tanpa reservation
 
-Produk tidak melakukan stock reservation saat QR dibuat.
+Produk tidak melakukan stock reservation.
 
 Alurnya:
 
-1. checkout membuat transaksi pending;
-2. server menghitung total;
-3. stok divalidasi;
-4. QRIS dibuat;
-5. customer membayar;
-6. webhook/payment confirmation diterima;
-7. stok divalidasi ulang;
-8. jika stok cukup → transaksi finalized;
-9. jika stok tidak cukup → `refund_required`.
+1. checkout membuat transaksi pending dengan harga server;
+2. customer membayar melalui media milik toko;
+3. operator memeriksa aplikasi merchant/rekening;
+4. operator mengonfirmasi pembayaran dengan request idempotent;
+5. stok divalidasi ulang;
+6. jika stok cukup → payment `paid` dan transaksi `completed`;
+7. jika stok tidak cukup → transaction/payment `refund_required` tanpa sale movement.
 
-Reservation bukan bagian dari kontrak v1.
+Checkout `pending_payment` lebih dari 24 jam menjadi `expired` dan harus dibuat ulang agar harga tidak memakai snapshot lama.
 
 ### 6.6 Return dan void
 
@@ -277,10 +276,7 @@ Void tidak menghapus transaksi.
 
 Void membuat reversal stock movement.
 
-Untuk transaksi yang memiliki payment sudah dibayar:
-
-- cash: owner mengembalikan uang secara manual;
-- QRIS: payment masuk ke workflow refund manual.
+Untuk seluruh metode yang memiliki payment sudah dibayar, pengembalian uang masuk ke workflow refund manual dan cumulative.
 
 ### 6.7 Inventory valuation
 
@@ -449,9 +445,9 @@ Tidak ada endpoint `DELETE` untuk record transaksi individual.
 - Transaction boundary untuk mutasi stok.
 - Row locking.
 - Idempotency untuk command penting.
-- Webhook signature verification.
-- Duplicate webhook safe.
-- Out-of-order webhook safe.
+- Manual payment idempotency dan unique-key race safe.
+- Billing webhook signature verification.
+- Billing webhook duplicate/out-of-order safe.
 - Audit trail.
 - Automated testing.
 - Backup.

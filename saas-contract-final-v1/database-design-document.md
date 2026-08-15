@@ -238,6 +238,7 @@ Movement type:
 - `stock_in`
 - `stock_out`
 - `sale`
+- `sale_void`
 - `customer_return`
 - `supplier_return`
 - `damaged`
@@ -313,10 +314,13 @@ Tabel khusus lifecycle uang POS.
 | id | BIGINT UNSIGNED | PK |
 | tenant_id | BIGINT UNSIGNED | FK |
 | pos_transaction_id | BIGINT UNSIGNED | FK |
-| method | ENUM | `cash`, `qris` |
+| method | ENUM | `cash`, `qris`, `transfer` |
 | amount | DECIMAL(15,2) | > 0 |
 | status | ENUM | lihat payment state |
 | gateway_reference | VARCHAR(255) | nullable |
+| confirmed_by | BIGINT UNSIGNED | nullable FK; wajib untuk `qris|transfer` |
+| manual_reference | VARCHAR(255) | nullable |
+| confirmation_note | TEXT | nullable |
 | refunded_amount | DECIMAL(15,2) | default 0 |
 | refunded_at | TIMESTAMP | nullable |
 | refunded_by | BIGINT UNSIGNED | nullable FK |
@@ -334,7 +338,9 @@ Payment status:
 - `partially_refunded`
 - `refunded`
 
-QR generation metadata yang diperlukan untuk provider dapat disimpan pada kolom provider-specific yang sudah dikontrak atau tabel payment attempt jika dibutuhkan. Penambahan struktur baru wajib melalui Document Delta Declaration.
+`qris|transfer` adalah payment manual non-tunai. Tidak ada metadata provider POS. `gateway_reference` tetap nullable untuk backward compatibility dan future delta.
+
+`pending_payment` pada `pos_transactions` memiliki TTL default 24 jam. Boundary expiry bersifat inklusif terhadap `created_at`.
 
 ---
 

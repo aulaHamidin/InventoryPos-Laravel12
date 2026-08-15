@@ -35,6 +35,10 @@ Route::prefix('v1')->group(function (): void {
 
         Route::post('/pos/checkout', [PosController::class, 'checkout']);
         Route::post('/pos/transactions/{id}/pay-cash', [PosController::class, 'payCash']);
+        Route::post('/pos/transactions/{id}/pay-manual', [PosController::class, 'payManual']);
+        Route::post('/pos/transactions/{id}/void', [PosController::class, 'void']);
+        Route::post('/pos/transactions/{id}/return', [PosController::class, 'returnItems']);
+        Route::post('/pos/payments/{id}/mark-refunded', [PosController::class, 'markRefunded']);
         Route::get('/pos/transactions/{id}/status', [PosController::class, 'status']);
 
         Route::get('/shopping-lists', [ShoppingListController::class, 'index']);

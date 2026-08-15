@@ -50,7 +50,9 @@ Contoh:
 - `RecordStockOutAction`
 - `RecordCustomerReturnAction`
 - `FinalizePosTransactionAction`
-- `GenerateQrisAction`
+- `ConfirmManualPaymentAction`
+- `ExpirePendingPosTransactionAction`
+- `VoidPosTransactionAction`
 - `MarkPosPaymentRefundedAction`
 - `SetPreferredSupplierAction`
 - `FinalizeStockOpnameAction`
@@ -111,11 +113,9 @@ Contoh:
 
 Listener tidak boleh menjadi source of truth stock mutation.
 
-### Payment Service
+### Payment Boundary
 
-Membungkus Midtrans.
-
-Tidak mengetahui UI.
+POS Fase 6 tidak memiliki payment provider. Cash dan manual non-tunai masuk ke `FinalizePosTransactionAction`. Midtrans hanya dibungkus oleh service billing saat Fase 11 aktif dan tidak mengetahui UI.
 
 ---
 
@@ -152,9 +152,9 @@ Semua code path yang memutasi stock harus menggunakan rule ini.
 ```text
 pending_payment
  ├── cash paid → completed
- ├── qris paid + stock valid → completed
- ├── qris paid + stock invalid → refund_required
- ├── timeout → expired
+ ├── manual qris/transfer confirmed + stock valid → completed
+ ├── manual qris/transfer confirmed + stock invalid → refund_required
+ ├── age >= pending TTL → expired
  └── unrecoverable business error → failed
 
 completed
@@ -182,7 +182,7 @@ Terminal transaction states:
 ```text
 pending
  ├── payment confirmed → paid
- └── gateway failure/expiry → failed
+ └── payment failure → failed
 
 paid
  ├── refund obligation → refund_required
@@ -297,37 +297,22 @@ commit
 
 ---
 
-### 6.3 QRIS
+### 6.3 Manual QRIS/Transfer
 
 ```text
 checkout
  ↓
 pending_payment
  ↓
-GenerateQrisAction
+ConfirmManualPaymentAction
  ↓
-Idempotency check
- ↓
-if active QR exists → return existing
-else → create Midtrans QR
- ↓
-store gateway reference
- ↓
-customer pays
- ↓
-Midtrans webhook
- ↓
-verify signature
- ↓
-resolve payment
- ↓
-idempotency/out-of-order check
- ↓
-if valid paid transition
+operator checks merchant/bank application
  ↓
 FinalizePosTransactionAction
  ↓
 lock transaction
+ ↓
+resolve idempotency key
  ↓
 lock item IDs ascending
  ↓
@@ -340,53 +325,27 @@ revalidate stock
 
 ---
 
-## 7. QRIS Idempotency
+## 7. Manual Payment Idempotency
 
-`GenerateQrisAction` harus bersifat idempotent.
+`ConfirmManualPaymentAction` harus bersifat idempotent.
 
 Rules:
 
 1. Transaction harus `pending_payment`.
-2. Jika active QR masih valid, return QR existing.
-3. Jika QR expired, old reference tetap disimpan untuk menerima late webhook.
-4. Retry request tidak boleh menghasilkan dua active payment attempts untuk transaksi yang sama.
-5. `Idempotency-Key` digunakan pada request.
-6. Gateway reference harus unique bila tersedia.
-7. Duplicate webhook tidak boleh membuat stock movement kedua.
+2. `Idempotency-Key` unique per tenant.
+3. Canonical payload adalah transaction, method, normalized reference, dan normalized note.
+4. Key/payload sama mengembalikan hasil lama.
+5. Key sama dengan transaction/payload berbeda menghasilkan `IDEMPOTENCY_CONFLICT`.
+6. Unique-key race dibaca ulang setelah duplicate constraint dan tidak boleh menjadi HTTP 500.
+7. Duplicate confirmation tidak boleh membuat payment atau movement kedua.
 
 ---
 
-## 8. Webhook Ordering
+## 8. Pending Expiry
 
-Webhook handler harus menganggap event eksternal dapat:
+Pending checkout memakai TTL default 24 jam.
 
-- duplicate;
-- terlambat;
-- out-of-order.
-
-Pseudo policy:
-
-```text
-current=pending_payment, event=paid
-→ finalize
-
-current=completed, event=paid
-→ idempotent ignore
-
-current=completed, event=expired
-→ ignore
-
-current=expired, event=paid
-→ reconciliation/manual review
-
-current=refund_required, event=paid
-→ ignore
-
-current=refunded, event=paid
-→ ignore
-```
-
-Webhook tidak boleh langsung memanggil mutation tanpa memeriksa state.
+Scheduler dan payment confirmation mengunci transaction yang sama. Scheduler mengubah hanya transaction yang masih pending pada boundary expiry; payment terhadap transaction expired ditolak dan checkout baru wajib dibuat.
 
 ---
 
@@ -408,8 +367,7 @@ insert reversal movements
 transaction = voided
  ↓
 if payment paid:
-    cash → manual cash return
-    qris → payment refund_required
+    cash/qris/transfer → payment refund_required
  ↓
 commit
 ```
@@ -433,32 +391,31 @@ calculate refund amount
  ↓
 update transaction status
  ↓
-if QRIS:
-    payment → partially_refunded/refund_required
+payment paid → refund_required
  ↓
 commit
 ```
 
-Refund amount berasal dari net line amount, bukan harga jual kotor sebelum diskon.
+Refund amount berasal dari cumulative exact net line amount, bukan harga jual kotor sebelum diskon. Payment status dapat `partially_refunded` dengan due nol bila refunded amount menutup obligation saat ini tetapi belum sebesar full payment amount.
 
 ---
 
 ## 10. Refund Manual
 
-v1 tidak memanggil API refund Midtrans.
+POS v1 tidak memanggil API refund provider.
 
 Owner:
 
 1. membuka transaksi;
 2. melihat amount yang harus direfund;
-3. melakukan refund pada dashboard Midtrans;
+3. mengembalikan cash atau melakukan refund melalui media toko;
 4. memilih `Tandai Sudah Refund`;
 5. memasukkan actual refunded amount jika diperlukan;
 6. sistem mencatat actor dan timestamp.
 
 Validation:
 
-`refunded_amount <= amount`.
+`current_refunded_amount <= refunded_amount <= refund_obligation_amount <= amount`.
 
 Status:
 
@@ -640,10 +597,8 @@ Authorization harus melalui Policy/permission gate.
 
 ### Integration
 
-- Midtrans webhook;
-- signature verification;
-- duplicate webhook;
-- out-of-order webhook.
+- queued POS export PDF/XLSX;
+- billing Midtrans/webhook pada Fase 11.
 
 ### Concurrency
 
@@ -672,5 +627,5 @@ Authorization harus melalui Policy/permission gate.
 - scheduled jobs.
 - backup.
 - restore verification.
-- webhook endpoint monitoring.
+- billing webhook endpoint monitoring setelah Fase 11.
 - application error monitoring.

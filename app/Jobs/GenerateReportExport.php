@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Enums\PosPaymentMethod;
 use App\Enums\PosTransactionStatus;
 use App\Models\Item;
 use App\Models\PosTransaction;
@@ -10,11 +11,16 @@ use App\Models\StockMovement;
 use App\Models\Tenant;
 use App\Notifications\ReportExportReady;
 use App\Services\TenantContext;
+use App\Support\Decimal;
+use App\Support\PosRefundCalculator;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Storage;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Throwable;
 
@@ -37,7 +43,7 @@ class GenerateReportExport implements ShouldQueue
             $export = ReportExport::whereKey($this->exportId)->firstOrFail();
             $export->update(['status' => 'processing', 'progress' => 10, 'error' => null]);
 
-            [$title, $headings, $rows] = $this->dataset($export);
+            [$title, $headings, $rows, $summaries] = $this->dataset($export);
             $export->update(['progress' => 65]);
 
             $extension = $export->format;
@@ -45,17 +51,25 @@ class GenerateReportExport implements ShouldQueue
             $path = "report-exports/{$export->tenant_id}/{$fileName}";
 
             if ($extension === 'pdf') {
-                $content = Pdf::loadView('reports.queued-export', compact('title', 'headings', 'rows'))->output();
+                $content = Pdf::loadView('reports.queued-export', compact('title', 'headings', 'rows', 'summaries'))->output();
             } else {
                 $spreadsheet = new Spreadsheet;
                 $sheet = $spreadsheet->getActiveSheet();
-                $sheet->fromArray([$headings], null, 'A1');
-                if ($rows !== []) {
-                    $sheet->fromArray($rows, null, 'A2');
-                }
+                $this->writeLiteralRows($sheet, array_merge([$headings], $rows));
                 $sheet->getStyle('A1:'.$sheet->getHighestColumn().'1')->getFont()->setBold(true);
                 foreach (range('A', $sheet->getHighestColumn()) as $column) {
                     $sheet->getColumnDimension($column)->setAutoSize(true);
+                }
+                if ($summaries !== []) {
+                    $summarySheet = $spreadsheet->createSheet();
+                    $summarySheet->setTitle('Ringkasan Metode');
+                    $this->writeLiteralRows($summarySheet, array_merge([[
+                        'Metode', 'Jumlah Payment', 'Total Payment', 'Refund Tercatat', 'Net Operasional',
+                    ]], $summaries));
+                    $summarySheet->getStyle('A1:E1')->getFont()->setBold(true);
+                    foreach (range('A', 'E') as $column) {
+                        $summarySheet->getColumnDimension($column)->setAutoSize(true);
+                    }
                 }
 
                 $temporary = tempnam(sys_get_temp_dir(), 'inventori-q-export-');
@@ -102,7 +116,7 @@ class GenerateReportExport implements ShouldQueue
                 $item->stok_saat_ini, $item->stok_minimal, $item->average_cost, $item->harga_jual,
             ])->all();
 
-            return ['Laporan Stok', ['Kode', 'Nama', 'Kategori', 'Satuan', 'Stok', 'Stok Minimal', 'Biaya Rata-rata', 'Harga Jual'], $rows];
+            return ['Laporan Stok', ['Kode', 'Nama', 'Kategori', 'Satuan', 'Stok', 'Stok Minimal', 'Biaya Rata-rata', 'Harga Jual'], $rows, []];
         }
 
         if ($export->report_type === 'movement') {
@@ -117,20 +131,79 @@ class GenerateReportExport implements ShouldQueue
                 $movement->qty, $movement->harga_satuan, $movement->note,
             ])->all();
 
-            return ['Laporan Pergerakan Stok', ['Tanggal', 'Kode', 'Item', 'Tipe', 'Arah', 'Qty', 'Harga Satuan', 'Catatan'], $rows];
+            return ['Laporan Pergerakan Stok', ['Tanggal', 'Kode', 'Item', 'Tipe', 'Arah', 'Qty', 'Harga Satuan', 'Catatan'], $rows, []];
         }
 
-        $query = PosTransaction::with('cashier')->orderByDesc('created_at')
+        $query = PosTransaction::with(['cashier', 'items', 'payment.confirmedBy'])->orderByDesc('created_at')
             ->when($filters['date_from'] ?? null, fn ($q, $date) => $q->whereDate('created_at', '>=', $date))
             ->when($filters['date_to'] ?? null, fn ($q, $date) => $q->whereDate('created_at', '<=', $date))
-            ->when($filters['status'] ?? null, fn ($q, $status) => $q->where('status', $status));
-        $rows = $query->get()->map(fn (PosTransaction $transaction) => [
-            $transaction->invoice_number, $transaction->created_at->format('Y-m-d H:i:s'),
-            $transaction->cashier?->name, $transaction->subtotal_amount,
-            $transaction->discount_amount, $transaction->total_amount,
-            $transaction->status instanceof PosTransactionStatus ? $transaction->status->value : $transaction->status,
-        ])->all();
+            ->when($filters['status'] ?? null, fn ($q, $status) => $q->where('status', $status))
+            ->when($filters['payment_method'] ?? null, fn ($q, $method) => $q->whereHas(
+                'payments', fn ($paymentQuery) => $paymentQuery->where('method', $method),
+            ));
+        $transactions = $query->get();
+        $rows = $transactions->map(function (PosTransaction $transaction): array {
+            $payment = $transaction->payment;
+            if ($payment !== null) {
+                $payment->setRelation('transaction', $transaction);
+            }
 
-        return ['Laporan POS', ['Invoice', 'Tanggal', 'Kasir', 'Bruto', 'Diskon', 'Net', 'Status'], $rows];
+            return [
+                $transaction->invoice_number,
+                $transaction->created_at->format('Y-m-d H:i:s'),
+                $transaction->cashier?->name,
+                $payment?->method->label() ?? 'Belum Dibayar',
+                $transaction->status instanceof PosTransactionStatus ? $transaction->status->value : $transaction->status,
+                $payment?->status->value ?? '-',
+                $payment?->amount ?? '0.00',
+                $payment?->paid_at?->format('Y-m-d H:i:s') ?? '-',
+                $payment?->manual_reference ?? '-',
+                $payment?->refunded_amount ?? '0.00',
+                $payment ? PosRefundCalculator::due($payment) : '0.00',
+            ];
+        })->all();
+
+        $summaries = collect(['cash', 'qris', 'transfer'])->map(function (string $method) use ($transactions): array {
+            $payments = $transactions->pluck('payment')->filter(
+                fn ($payment): bool => $payment !== null && $payment->method->value === $method && $payment->paid_at !== null,
+            );
+            $amount = $payments->reduce(
+                fn (string $total, $payment): string => Decimal::add($total, (string) $payment->amount),
+                '0.00',
+            );
+            $refunded = $payments->reduce(
+                fn (string $total, $payment): string => Decimal::add($total, (string) ($payment->refunded_amount ?? '0.00')),
+                '0.00',
+            );
+
+            return [
+                PosPaymentMethod::from($method)->label(),
+                $payments->count(),
+                $amount,
+                $refunded,
+                Decimal::sub($amount, $refunded),
+            ];
+        })->all();
+
+        return [
+            'Laporan POS',
+            ['Invoice', 'Tanggal', 'Kasir', 'Metode', 'Status Transaksi', 'Status Payment', 'Payment', 'Dikonfirmasi', 'Referensi', 'Refund Tercatat', 'Refund Due'],
+            $rows,
+            $summaries,
+        ];
+    }
+
+    private function writeLiteralRows(Worksheet $sheet, array $rows): void
+    {
+        foreach ($rows as $rowIndex => $row) {
+            foreach (array_values($row) as $columnIndex => $value) {
+                $coordinate = Coordinate::stringFromColumnIndex($columnIndex + 1).($rowIndex + 1);
+                if (is_int($value) || is_float($value)) {
+                    $sheet->setCellValue($coordinate, $value);
+                } else {
+                    $sheet->setCellValueExplicit($coordinate, (string) $value, DataType::TYPE_STRING);
+                }
+            }
+        }
     }
 }

@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\User;
 use Illuminate\Support\Str;
 use Symfony\Component\Process\Process;
 
@@ -38,15 +39,17 @@ function concurrencyFixture(bool $withTransaction = false): array
     $itemId = (int) $pdo->lastInsertId();
 
     $transactionId = null;
+    $transactionItemId = null;
     if ($withTransaction) {
         $pdo->prepare('INSERT INTO pos_transactions (tenant_id, cashier_id, invoice_number, status, subtotal_amount, discount_amount, total_amount, idempotency_key, request_hash, created_at, updated_at) VALUES (?, ?, ?, ?, 200, 0, 200, ?, ?, ?, ?)')
             ->execute([$tenantId, $userId, "POS-CONCURRENT-{$suffix}", 'pending_payment', "pay-{$suffix}", str_repeat('a', 64), $now, $now]);
         $transactionId = (int) $pdo->lastInsertId();
         $pdo->prepare('INSERT INTO pos_transaction_items (tenant_id, pos_transaction_id, item_id, qty, returned_qty, harga_saat_transaksi, discount_amount, subtotal_amount, created_at) VALUES (?, ?, ?, 2, 0, 100, 0, 200, ?)')
             ->execute([$tenantId, $transactionId, $itemId, $now]);
+        $transactionItemId = (int) $pdo->lastInsertId();
     }
 
-    return compact('pdo', 'tenantId', 'userId', 'categoryId', 'itemId', 'transactionId', 'suffix', 'now');
+    return compact('pdo', 'tenantId', 'userId', 'categoryId', 'itemId', 'transactionId', 'transactionItemId', 'suffix', 'now');
 }
 
 function preferredConcurrencyFixture(): array
@@ -114,6 +117,8 @@ function opnameConcurrencyFixture(bool $counted = false): array
 function cleanupConcurrencyFixture(array $fixture): void
 {
     $pdo = concurrencyPdo();
+    $pdo->prepare('DELETE FROM notifications WHERE notifiable_type = ? AND notifiable_id = ?')
+        ->execute([User::class, $fixture['userId']]);
     foreach ([
         'audit_logs', 'pos_payments', 'item_stock_movements', 'stock_opname_details', 'stock_opnames', 'pos_transaction_items',
         'pos_transactions', 'shopping_list_items', 'shopping_lists', 'item_suppliers',
@@ -178,6 +183,116 @@ it('allows only one of two truly concurrent cash payment processes', function ()
         }
     } finally {
         cleanupConcurrencyFixture($fixture);
+    }
+});
+
+it('deduplicates two concurrent manual confirmations with the same key', function () {
+    $fixture = concurrencyFixture(true);
+    $key = (string) Str::uuid();
+    $command = [PHP_BINARY, base_path('tests/Support/concurrent-pos-worker.php'), 'manual',
+        (string) $fixture['tenantId'], (string) $fixture['userId'], (string) $fixture['transactionId'], $key, 'qris'];
+
+    try {
+        expect(runConcurrentWorkers([$command, $command]))->toBe(['manual', 'manual']);
+        $pdo = concurrencyPdo();
+        foreach ([
+            ['SELECT COUNT(*) FROM pos_payments WHERE tenant_id = ?', 1],
+            ['SELECT COUNT(*) FROM item_stock_movements WHERE tenant_id = ? AND movement_type = "sale"', 1],
+            ['SELECT stok_saat_ini FROM items WHERE id = ?', 8, $fixture['itemId']],
+        ] as $check) {
+            [$sql, $expected, $parameter] = array_pad($check, 3, $fixture['tenantId']);
+            $statement = $pdo->prepare($sql);
+            $statement->execute([$parameter]);
+            expect((int) $statement->fetchColumn())->toBe($expected);
+        }
+    } finally {
+        cleanupConcurrencyFixture($fixture);
+    }
+});
+
+it('applies exactly one concurrent cash versus manual payment', function () {
+    $fixture = concurrencyFixture(true);
+    $cash = [PHP_BINARY, base_path('tests/Support/concurrent-pos-worker.php'), 'pay',
+        (string) $fixture['tenantId'], (string) $fixture['userId'], (string) $fixture['transactionId'], '-', '-'];
+    $manual = [PHP_BINARY, base_path('tests/Support/concurrent-pos-worker.php'), 'manual',
+        (string) $fixture['tenantId'], (string) $fixture['userId'], (string) $fixture['transactionId'], (string) Str::uuid(), 'transfer'];
+
+    try {
+        $outcomes = runConcurrentWorkers([$cash, $manual]);
+        expect(collect($outcomes)->filter(fn (string $value): bool => in_array($value, ['paid', 'manual'], true)))->toHaveCount(1)
+            ->and(collect($outcomes)->filter(fn (string $value): bool => $value === 'TRANSACTION_ALREADY_PROCESSED'))->toHaveCount(1);
+        $statement = concurrencyPdo()->prepare('SELECT COUNT(*) FROM pos_payments WHERE tenant_id = ?');
+        $statement->execute([$fixture['tenantId']]);
+        expect((int) $statement->fetchColumn())->toBe(1);
+    } finally {
+        cleanupConcurrencyFixture($fixture);
+    }
+});
+
+it('makes scheduler expiry versus payment deterministic at the TTL boundary', function () {
+    $fixture = concurrencyFixture(true);
+    $fixture['pdo']->prepare('UPDATE pos_transactions SET created_at = DATE_SUB(NOW(), INTERVAL 25 HOUR) WHERE id = ?')
+        ->execute([$fixture['transactionId']]);
+    $pay = [PHP_BINARY, base_path('tests/Support/concurrent-pos-worker.php'), 'pay',
+        (string) $fixture['tenantId'], (string) $fixture['userId'], (string) $fixture['transactionId'], '-', '-'];
+    $expire = [PHP_BINARY, base_path('tests/Support/concurrent-pos-worker.php'), 'expire',
+        (string) $fixture['tenantId'], (string) $fixture['userId'], (string) $fixture['transactionId'], '-', '-'];
+
+    try {
+        $outcomes = runConcurrentWorkers([$pay, $expire]);
+        $pdo = concurrencyPdo();
+        $statement = $pdo->prepare('SELECT status FROM pos_transactions WHERE id = ?');
+        $statement->execute([$fixture['transactionId']]);
+        $status = $statement->fetchColumn();
+        expect($status)->toBe('expired')
+            ->and(collect($outcomes)->contains(fn (string $value): bool => in_array($value, ['expired', 'TRANSACTION_EXPIRED'], true)))->toBeTrue()
+            ->and(collect($outcomes)->contains(fn (string $value): bool => in_array($value, ['skipped', 'TRANSACTION_ALREADY_PROCESSED'], true)))->toBeTrue();
+    } finally {
+        cleanupConcurrencyFixture($fixture);
+    }
+});
+
+it('applies exactly one of concurrent manual confirmations with different keys', function () {
+    $fixture = concurrencyFixture(true);
+    $base = [PHP_BINARY, base_path('tests/Support/concurrent-pos-worker.php'), 'manual',
+        (string) $fixture['tenantId'], (string) $fixture['userId'], (string) $fixture['transactionId']];
+    $first = array_merge($base, [(string) Str::uuid(), 'qris']);
+    $second = array_merge($base, [(string) Str::uuid(), 'transfer']);
+
+    try {
+        $outcomes = runConcurrentWorkers([$first, $second]);
+        expect(collect($outcomes)->filter(fn (string $value): bool => $value === 'manual'))->toHaveCount(1)
+            ->and(collect($outcomes)->filter(fn (string $value): bool => $value === 'TRANSACTION_ALREADY_PROCESSED'))->toHaveCount(1);
+    } finally {
+        cleanupConcurrencyFixture($fixture);
+    }
+});
+
+it('serializes concurrent void versus return and return versus return', function () {
+    foreach ([['void-return', 1], ['return-return', 2]] as [$scenario, $returnQty]) {
+        $fixture = concurrencyFixture(true);
+        $pdo = $fixture['pdo'];
+        $pdo->prepare('UPDATE pos_transactions SET status = "completed", completed_at = ? WHERE id = ?')
+            ->execute([$fixture['now'], $fixture['transactionId']]);
+        $pdo->prepare('UPDATE items SET stok_saat_ini = 8 WHERE id = ?')->execute([$fixture['itemId']]);
+        $pdo->prepare('INSERT INTO pos_payments (tenant_id, pos_transaction_id, method, amount, status, refunded_amount, idempotency_key, paid_at, created_at, updated_at) VALUES (?, ?, "cash", 200, "paid", 0, ?, ?, ?, ?)')
+            ->execute([$fixture['tenantId'], $fixture['transactionId'], "cash-{$fixture['transactionId']}", $fixture['now'], $fixture['now'], $fixture['now']]);
+
+        $return = [PHP_BINARY, base_path('tests/Support/concurrent-pos-worker.php'), 'return',
+            (string) $fixture['tenantId'], (string) $fixture['userId'], (string) $fixture['transactionId'],
+            (string) $fixture['transactionItemId'], (string) $returnQty];
+        $commands = $scenario === 'void-return'
+            ? [[PHP_BINARY, base_path('tests/Support/concurrent-pos-worker.php'), 'void',
+                (string) $fixture['tenantId'], (string) $fixture['userId'], (string) $fixture['transactionId'], 'Concurrent void', '-'], $return]
+            : [$return, $return];
+
+        try {
+            $outcomes = runConcurrentWorkers($commands);
+            expect(collect($outcomes)->filter(fn (string $value): bool => in_array($value, ['voided', 'returned'], true)))->toHaveCount(1)
+                ->and(collect($outcomes)->filter(fn (string $value): bool => $value === 'INVALID_STATE_TRANSITION'))->toHaveCount(1);
+        } finally {
+            cleanupConcurrencyFixture($fixture);
+        }
     }
 });
 

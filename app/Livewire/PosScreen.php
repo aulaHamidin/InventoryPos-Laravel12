@@ -3,11 +3,13 @@
 namespace App\Livewire;
 
 use App\Actions\Pos\CheckoutPosAction;
+use App\Actions\Pos\ConfirmManualPaymentAction;
 use App\Actions\Pos\PayCashAction;
 use App\Exceptions\ApiProblemException;
 use App\Models\Item;
 use App\Models\PosTransaction;
 use App\Support\AuditContext;
+use App\Support\PosReceiptFormatter;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -27,6 +29,14 @@ class PosScreen extends Component
 
     public string $change = '0';
 
+    public string $paymentMethod = 'cash';
+
+    public string $manualReference = '';
+
+    public string $confirmationNote = '';
+
+    public bool $manualConfirmed = false;
+
     public bool $showReceipt = false;
 
     public ?array $completedTransaction = null;
@@ -37,7 +47,13 @@ class PosScreen extends Component
 
     public string $idempotencyKey = '';
 
+    public string $paymentIdempotencyKey = '';
+
     public bool $processingPayment = false;
+
+    public bool $bluetoothPrintEnabled = false;
+
+    public ?int $selectedCartIndex = null;
 
     protected $listeners = ['scanBarcode' => 'handleBarcode'];
 
@@ -48,6 +64,7 @@ class PosScreen extends Component
 
     public function mount(): void
     {
+        $this->bluetoothPrintEnabled = (bool) config('pos.bluetooth_print_enabled', false);
         $this->resetCart();
     }
 
@@ -74,7 +91,12 @@ class PosScreen extends Component
             return;
         }
 
-        $item = Item::where('barcode', $barcode)->where('is_active', true)->first();
+        $item = Item::where('is_active', true)
+            ->where(fn ($query) => $query->where('barcode', $barcode)
+                ->orWhere('kode', $barcode)
+                ->orWhere('nama', 'like', "%{$barcode}%"))
+            ->orderByRaw('barcode = ? DESC, kode = ? DESC', [$barcode, $barcode])
+            ->first();
         if ($item === null) {
             $this->setFeedback("Barcode '{$barcode}' tidak ditemukan.", 'error');
 
@@ -97,6 +119,7 @@ class PosScreen extends Component
         if ($index !== false) {
             $this->cart[$index]['qty']++;
             $this->recalculateLine($index);
+            $this->selectedCartIndex = $index;
         } else {
             $this->cart[] = [
                 'item_id' => $item->getKey(), 'nama' => $item->nama, 'kode' => $item->kode,
@@ -104,6 +127,7 @@ class PosScreen extends Component
                 'discount_amount' => '0.00', 'subtotal' => (string) $item->harga_jual,
                 'stok_tersedia' => $item->stok_saat_ini,
             ];
+            $this->selectedCartIndex = count($this->cart) - 1;
         }
 
         $this->renewAttempt();
@@ -124,6 +148,7 @@ class PosScreen extends Component
         }
 
         $this->cart[$index]['qty'] = $qty;
+        $this->selectedCartIndex = $index;
         $this->recalculateLine($index);
         $this->renewAttempt();
     }
@@ -142,6 +167,7 @@ class PosScreen extends Component
         }
 
         $this->cart[$index]['discount_amount'] = number_format($value, 2, '.', '');
+        $this->selectedCartIndex = $index;
         $this->recalculateLine($index);
         $this->renewAttempt();
     }
@@ -154,7 +180,36 @@ class PosScreen extends Component
 
         unset($this->cart[$index]);
         $this->cart = array_values($this->cart);
+        $this->selectedCartIndex = $this->cart === [] ? null : min($index, count($this->cart) - 1);
         $this->renewAttempt();
+    }
+
+    public function selectCartItem(int $index): void
+    {
+        if (isset($this->cart[$index])) {
+            $this->selectedCartIndex = $index;
+        }
+    }
+
+    public function incrementSelected(): void
+    {
+        if ($this->selectedCartIndex !== null && isset($this->cart[$this->selectedCartIndex])) {
+            $this->updateQty($this->selectedCartIndex, $this->cart[$this->selectedCartIndex]['qty'] + 1);
+        }
+    }
+
+    public function decrementSelected(): void
+    {
+        if ($this->selectedCartIndex !== null && isset($this->cart[$this->selectedCartIndex])) {
+            $this->updateQty($this->selectedCartIndex, $this->cart[$this->selectedCartIndex]['qty'] - 1);
+        }
+    }
+
+    public function removeSelected(): void
+    {
+        if ($this->selectedCartIndex !== null) {
+            $this->removeFromCart($this->selectedCartIndex);
+        }
     }
 
     public function getCartGrossProperty(): float
@@ -182,12 +237,22 @@ class PosScreen extends Component
 
         $this->cashReceived = number_format($this->cartTotal, 2, '.', '');
         $this->updatedCashReceived();
+        $this->paymentMethod = 'cash';
+        $this->manualReference = '';
+        $this->confirmationNote = '';
+        $this->manualConfirmed = false;
+        $this->paymentIdempotencyKey = (string) Str::uuid();
         $this->showPaymentModal = true;
     }
 
     public function updatedCashReceived(): void
     {
         $this->change = number_format(max(0, (float) $this->cashReceived - $this->cartTotal), 2, '.', '');
+    }
+
+    public function updatedPaymentMethod(): void
+    {
+        $this->manualConfirmed = false;
     }
 
     public function cancelPayment(): void
@@ -197,11 +262,27 @@ class PosScreen extends Component
 
     public function processCashPayment(): void
     {
+        $this->paymentMethod = 'cash';
+        $this->processPayment();
+    }
+
+    public function processPayment(): void
+    {
         if ($this->processingPayment) {
             return;
         }
-        if ((float) $this->cashReceived < $this->cartTotal) {
+        if (! in_array($this->paymentMethod, ['cash', 'qris', 'transfer'], true)) {
+            $this->setFeedback('Metode pembayaran tidak valid.', 'error');
+
+            return;
+        }
+        if ($this->paymentMethod === 'cash' && (float) $this->cashReceived < $this->cartTotal) {
             $this->setFeedback('Uang yang diterima kurang dari total.', 'error');
+
+            return;
+        }
+        if ($this->paymentMethod !== 'cash' && ! $this->manualConfirmed) {
+            $this->setFeedback('Pastikan dana benar-benar telah diterima sebelum konfirmasi.', 'error');
 
             return;
         }
@@ -218,23 +299,33 @@ class PosScreen extends Component
             $transaction = app(CheckoutPosAction::class)->execute(
                 $items, $this->idempotencyKey, auth()->user(), AuditContext::fromRequest(request()),
             );
-            $result = app(PayCashAction::class)->execute(
-                (int) $transaction->getKey(), $this->cashReceived, auth()->user(), AuditContext::fromRequest(request()),
-            );
+            $result = $this->paymentMethod === 'cash'
+                ? app(PayCashAction::class)->execute(
+                    (int) $transaction->getKey(), $this->cashReceived, auth()->user(), AuditContext::fromRequest(request()),
+                )
+                : app(ConfirmManualPaymentAction::class)->execute(
+                    (int) $transaction->getKey(),
+                    $this->paymentMethod,
+                    $this->paymentIdempotencyKey,
+                    auth()->user(),
+                    $this->manualReference,
+                    $this->confirmationNote,
+                    AuditContext::fromRequest(request()),
+                );
 
-            $this->completedTransaction = [
-                'invoice_number' => $result['transaction']->invoice_number,
-                'subtotal_amount' => (float) $result['transaction']->subtotal_amount,
-                'discount_amount' => (float) $result['transaction']->discount_amount,
-                'total_amount' => (float) $result['transaction']->total_amount,
-                'cash_received' => (float) $result['cash_received'],
-                'change' => (float) $result['change'],
-                'items' => $this->cart,
-                'cashier' => auth()->user()->name,
-                'date' => now()->format('d/m/Y H:i'),
-            ];
+            $this->completedTransaction = PosReceiptFormatter::format(
+                $result['transaction'],
+                $result['payment'],
+                $this->cart,
+                auth()->user()->name,
+                $this->paymentMethod === 'cash' ? $result['cash_received'] : null,
+                $this->paymentMethod === 'cash' ? $result['change'] : null,
+            );
             $this->showPaymentModal = false;
             $this->showReceipt = true;
+            if (($result['requires_refund'] ?? false) === true) {
+                $this->setFeedback('Dana tercatat diterima, tetapi stok gagal. Refund wajib diproses; jangan bayar ulang.', 'error');
+            }
         } catch (ValidationException $exception) {
             $this->setFeedback((string) collect($exception->errors())->flatten()->first(), 'error');
         } catch (ApiProblemException $exception) {
@@ -269,6 +360,7 @@ class PosScreen extends Component
     private function renewAttempt(): void
     {
         $this->idempotencyKey = (string) Str::uuid();
+        $this->paymentIdempotencyKey = (string) Str::uuid();
     }
 
     private function resetCart(): void
@@ -279,6 +371,11 @@ class PosScreen extends Component
         $this->showPaymentModal = false;
         $this->cashReceived = '0';
         $this->change = '0';
+        $this->paymentMethod = 'cash';
+        $this->manualReference = '';
+        $this->confirmationNote = '';
+        $this->manualConfirmed = false;
+        $this->selectedCartIndex = null;
         $this->processingPayment = false;
         $this->renewAttempt();
     }

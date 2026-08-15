@@ -1,5 +1,7 @@
 <?php
 
+use App\Actions\Pos\CheckoutPosAction;
+use App\Actions\Pos\ConfirmManualPaymentAction;
 use App\Actions\Reports\QueueReportExportAction;
 use App\Enums\UserRole;
 use App\Jobs\GenerateReportExport;
@@ -10,6 +12,8 @@ use App\Services\TenantContext;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 it('queues tenant scoped exports instead of streaming from controller', function () {
     [, $owner] = makeTenantUser();
@@ -106,4 +110,41 @@ it('exposes print actions on every tenant report surface', function () {
     $this->actingAs($owner)->get('/app/pos-transactions')
         ->assertOk()
         ->assertSee('window.print()', false);
+});
+
+it('filters POS export by payment method, emits method summaries, and keeps references literal', function () {
+    [$tenant, $owner] = makeTenantUser();
+    $item = makeInventoryItem(['harga_jual' => '100.00']);
+    Storage::fake('local');
+    Notification::fake();
+
+    $transaction = app(CheckoutPosAction::class)->execute([[
+        'item_id' => $item->id, 'qty' => 1, 'discount_amount' => '0.00',
+    ]], (string) Str::uuid(), $owner);
+    app(ConfirmManualPaymentAction::class)->execute(
+        $transaction->id, 'qris', (string) Str::uuid(), $owner, '=HYPERLINK("https://invalid")', 'Literal note',
+    );
+
+    $export = ReportExport::create([
+        'user_id' => $owner->id,
+        'report_type' => 'pos',
+        'format' => 'xlsx',
+        'status' => 'queued',
+        'progress' => 0,
+        'filters' => ['payment_method' => 'qris'],
+    ]);
+    (new GenerateReportExport($export->id, $tenant->id))->handle();
+    $export->refresh();
+
+    $temporary = tempnam(sys_get_temp_dir(), 'pos-export-test-');
+    file_put_contents($temporary, Storage::disk('local')->get($export->path));
+    $workbook = IOFactory::load($temporary);
+    unlink($temporary);
+
+    expect($workbook->getSheet(0)->getCell('D2')->getValue())->toBe('QRIS Statis')
+        ->and($workbook->getSheet(0)->getCell('I2')->getValue())->toBe('=HYPERLINK("https://invalid")')
+        ->and($workbook->getSheet(0)->getCell('I2')->getDataType())->toBe('s')
+        ->and($workbook->getSheetByName('Ringkasan Metode'))->not->toBeNull()
+        ->and($workbook->getSheetByName('Ringkasan Metode')->getCell('A3')->getValue())->toBe('QRIS Statis')
+        ->and($workbook->getSheetByName('Ringkasan Metode')->getCell('B3')->getValue())->toBe(1);
 });

@@ -29,6 +29,9 @@ class QueueReportExportAction
         if (! empty($filters['category_id'])) {
             OwnershipGuard::validate(Category::class, (int) $filters['category_id']);
         }
+        if (! empty($filters['payment_method']) && ! in_array($filters['payment_method'], ['cash', 'qris', 'transfer'], true)) {
+            throw ValidationException::withMessages(['payment_method' => ['Metode pembayaran tidak valid.']]);
+        }
 
         $export = ReportExport::create([
             'user_id' => $actor->getKey(),

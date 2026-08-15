@@ -29,7 +29,7 @@ graph TD
     F3["Fase 3: Reports & Export"]
     F4["Fase 4: Low Stock & Shopping"]
     F5["Fase 5: Cycle Counting"]
-    F6["Fase 6: POS Lengkap & QRIS"]
+    F6["Fase 6: POS Lengkap & Manual Non-Tunai"]
     F7["Fase 7: Analytics & Threshold"]
     F8["Fase 8: Staff & Multi-Kasir"]
     F9["Fase 9: Hardening & Pilot"]
@@ -380,20 +380,20 @@ new_avg = ((old_stock × old_avg) + (in_qty × in_cost)) / (old_stock + in_qty)
 
 ---
 
-## Fase 6 — Smart POS Lengkap & QRIS
+## Fase 6 — POS Lengkap & Pembayaran Manual Non-Tunai
 
 ### Deliverables
-- Perluas baseline `pos_payments` Fase 2 untuk QRIS, gateway lifecycle, dan refund behavior
-- Midtrans QRIS integration
-- `GenerateQrisAction` — idempotent, reuse active QR
-- `HandleMidtransWebhookAction` — signature verify, idempotent, duplicate/out-of-order safe
+- Perluas baseline `pos_payments` untuk QRIS statis, transfer, confirmer, reference, note, dan refund behavior
+- `ConfirmManualPaymentAction` — tenant-scoped, idempotent, unique-key race safe
+- `ExpirePendingPosTransactionAction` — TTL checkout umum 24 jam
 - `FinalizePosTransactionAction` — revalidate stock → completed or refund_required
-- `VoidTransactionAction` — reversal movements, cash/QRIS refund obligation
+- `VoidTransactionAction` — `sale_void` movements dan full refund obligation semua metode
 - `PartialReturnAction` — validate returned_qty ≤ sold qty, customer_return movements
-- `MarkRefundedAction` — manual owner refund marking
-- QRIS payment UI in POS (QR display, polling status, timeout handling)
-- Web Bluetooth print + fallback print dialog
-- 8 release blocker tests
+- `MarkRefundedAction` — cumulative manual owner refund marking dan due calculation
+- Histori, receipt, queued PDF/XLSX, dan report summary per metode
+- Manual QRIS/transfer UI tanpa provider verification
+- Web Bluetooth beta default off + fallback print dialog/PDF
+- 10 release blocker tests
 
 ---
 
@@ -500,11 +500,11 @@ Semua fase lulus acceptance criteria + testing contract.
 | Design System | Shared CSS tokens (Indigo/Emerald/Amber/Rose + Inter font) |
 | CSS | Tailwind CSS (Filament default) + custom design tokens |
 | POS API | JSON endpoints via Sanctum token |
-| Webhook | JSON endpoints, no auth token, signature verify |
+| Webhook | Billing Fase 11 only; no POS webhook |
 | PDF | DomPDF |
 | Excel | Laravel Excel |
-| Payment Gateway | Midtrans (QRIS) |
-| Print | Web Bluetooth + print dialog fallback |
+| Payment Gateway | Midtrans billing Fase 11 only |
+| Print | Print dialog/PDF default; Web Bluetooth beta feature flag |
 | Queue | Laravel Horizon |
 | Testing | Pest PHP |
 | Local Dev | Laravel Sail (Docker) |
@@ -566,7 +566,7 @@ Fase 5 tidak boleh dimulai sebelum acceptance dan testing contract Fase 0-4 lulu
 ### Deferred Contract
 
 - Fase 5: stock opname.
-- Fase 6: QRIS, webhook, void, return, refund.
+- Fase 6: manual QRIS/transfer, expiry, void, return, refund, history/reporting.
 - Fase 7: analytics dan Smart Threshold.
 - Fase 8: aktivasi Staff dan multi-kasir.
 - Fase 10+: billing, platform admin, impersonation, deletion.
