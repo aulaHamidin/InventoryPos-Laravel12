@@ -1,6 +1,6 @@
 # Implementation Plan Fase 6 — POS Lengkap & Pembayaran Manual Non-Tunai
 
-Status: **IMPLEMENTED — LOCAL/VISUAL PASS, CI REMOTE PENDING**
+Status: **SELESAI — LOCAL, VISUAL, DAN CI REMOTE PASS**
 
 Baseline: commit `daefc43` — Fase 5 selesai, local/visual/CI hijau.
 

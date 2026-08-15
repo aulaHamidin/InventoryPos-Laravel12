@@ -273,8 +273,8 @@ Tambahan wajib:
 - [x] Integration/security/concurrency tests lulus.
 - [x] Histori/report/export dan print fallback terverifikasi.
 - [x] Visual evidence lengkap.
-- [ ] Full quality gate dan CI remote hijau.
-- [ ] Fase 6 ditandai selesai.
+- [x] Full quality gate dan CI remote hijau.
+- [x] Fase 6 ditandai selesai.
 
 ---
 
@@ -704,7 +704,7 @@ Evidence tidak boleh memuat `.env`, secret, access token, OTP nyata, webhook sig
 ### Execution
 
 - [x] Fase 5 — Cycle Counting.
-- [ ] Fase 6 — POS Lengkap & Pembayaran Manual Non-Tunai.
+- [x] Fase 6 — POS Lengkap & Pembayaran Manual Non-Tunai.
 - [ ] Fase 7 — Analytics & Smart Threshold.
 - [ ] Fase 8 — Staff & Multi-Kasir.
 - [ ] Fase 9 — Hardening & Pilot.

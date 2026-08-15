@@ -2,11 +2,13 @@
 
 Tanggal eksekusi lokal: 15 Agustus 2026
 
-Status: **LOCAL DAN VISUAL LULUS — CI REMOTE MENUNGGU COMMIT IMPLEMENTASI**
+Status: **SELESAI — LOCAL, VISUAL, DAN CI REMOTE LULUS**
 
 ## Revision
 
 - Baseline: `daefc43 Record-phase-5-CI-gate-closure`.
+- Implementation commit: `879af37 Complete-phase-6-manual-POS-payments`.
+- GitHub Actions implementation run: [`31896657112`](https://github.com/aulaHamidin/InventoryPos-Laravel12/actions/runs/31896657112), conclusion `success`.
 - Document Delta: `saas-contract-final-v1/document-delta-f6-pos-manual-payment.md`.
 - Implementation plan: `saas-contract-final-v1/implementation-plan-fase-6.md`.
 
@@ -38,7 +40,7 @@ Status: **LOCAL DAN VISUAL LULUS — CI REMOTE MENUNGGU COMMIT IMPLEMENTASI**
 - Migration fresh, rollback F6, upgrade dari baseline F5, dan command expiry: lulus.
 - Multi-process concurrency, API, tenant/security, report/export, XSS, formula injection, dan Fase 0–5 regression: lulus.
 - `npm run build`, `vendor/bin/pint --test`, `composer validate --strict`, `composer check-platform-reqs`, `php artisan view:cache`, `php artisan route:list`, dan `php artisan schedule:list`: lulus.
-- CI sekarang menjalankan `npm test` sebelum build.
+- CI menjalankan `npm test` sebelum build; implementation run remote lulus.
 
 ## Visual walkthrough
 
@@ -47,8 +49,10 @@ Status: **LOCAL DAN VISUAL LULUS — CI REMOTE MENUNGGU COMMIT IMPLEMENTASI**
 - Cash, QRIS, transfer, receipt, history/method summary, filter, transaction detail, return/refund-required, refund selesai, expired/unpaid, export filter, dan print fallback tervalidasi.
 - Evidence: [`evidence/f6-pos-manual-payment-2026-08-15/`](evidence/f6-pos-manual-payment-2026-08-15/).
 
-## Pending closure gate
+## Final decision
 
-- Commit dan push implementasi.
-- GitHub Actions implementation run harus `success`.
-- Setelah itu master checklist Fase 6 dan status acceptance diubah menjadi selesai melalui closure commit terpisah.
+- Automated/local quality gate: **PASS**.
+- Visual desktop/mobile: **PASS**.
+- CI remote implementation: **PASS**.
+- Bluetooth tetap disabled sampai ada hardware validation evidence.
+- Fase 6 ditutup; Fase 7 boleh dimulai sesuai master plan.
