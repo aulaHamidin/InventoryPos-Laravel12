@@ -33,6 +33,8 @@ Tidak ada fase dianggap selesai hanya karena kode berjalan. Acceptance Criteria 
 - base policies.
 - audit foundation.
 - CI.
+- pemisahan guard dan shell panel tenant `/app` dari platform `/admin`;
+- provisioning awal super-admin tanpa kredensial default.
 
 ### Acceptance
 
@@ -248,6 +250,8 @@ No unresolved P0 security/data/financial issue.
 ---
 
 ## 12. Fase 10 — Billing MRR & Admin Pusat
+
+Fase ini melanjutkan shell `/admin` dari Fase 0 dengan resource operasional platform. Panel tenant tetap terisolasi di `/app`.
 
 ### MVP billing capability
 

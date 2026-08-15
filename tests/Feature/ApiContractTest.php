@@ -59,8 +59,8 @@ it('allows Owner, denies Staff, and hides cross tenant IDs as 404', function () 
         ->assertNotFound()
         ->assertJsonPath('error_code', 'NOT_FOUND');
 
-    expect($ownerB->canAccessPanel(filament()->getPanel('admin')))->toBeTrue()
-        ->and($staff->canAccessPanel(filament()->getPanel('admin')))->toBeFalse();
+    expect($ownerB->canAccessPanel(filament()->getPanel('app')))->toBeTrue()
+        ->and($staff->canAccessPanel(filament()->getPanel('app')))->toBeFalse();
 });
 
 it('uses canonical stock and item supplier API contracts', function () {

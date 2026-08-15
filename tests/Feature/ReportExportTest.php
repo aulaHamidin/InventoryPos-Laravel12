@@ -76,20 +76,20 @@ it('shows export progress to Owner and protects private files by tenant and role
         'completed_at' => now(),
     ]);
 
-    $this->actingAs($ownerA)->get('/admin/report-exports')->assertOk();
+    $this->actingAs($ownerA)->get('/app/report-exports')->assertOk();
     $this->actingAs($ownerA)
-        ->get("/reports/exports/{$exportA->id}/download")
+        ->get("/app/reports/exports/{$exportA->id}/download")
         ->assertOk()
         ->assertDownload('stock-a.xlsx');
 
     [, $ownerB] = makeTenantUser();
     $this->actingAs($ownerB)
-        ->get("/reports/exports/{$exportA->id}/download")
+        ->get("/app/reports/exports/{$exportA->id}/download")
         ->assertNotFound();
 
     TenantContext::set($tenantA);
     $this->actingAs($staffA)
-        ->get("/reports/exports/{$exportA->id}/download")
+        ->get("/app/reports/exports/{$exportA->id}/download")
         ->assertForbidden();
 });
 
@@ -97,13 +97,13 @@ it('exposes print actions on every tenant report surface', function () {
     [, $owner] = makeTenantUser();
     makeInventoryItem();
 
-    $this->actingAs($owner)->get('/admin/items')
+    $this->actingAs($owner)->get('/app/items')
         ->assertOk()
         ->assertSee('window.print()', false);
-    $this->actingAs($owner)->get('/admin/stock-movements')
+    $this->actingAs($owner)->get('/app/stock-movements')
         ->assertOk()
         ->assertSee('window.print()', false);
-    $this->actingAs($owner)->get('/admin/pos-transactions')
+    $this->actingAs($owner)->get('/app/pos-transactions')
         ->assertOk()
         ->assertSee('window.print()', false);
 });

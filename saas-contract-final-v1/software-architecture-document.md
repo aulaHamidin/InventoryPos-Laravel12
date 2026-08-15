@@ -61,6 +61,14 @@ Hindari `HandleStockAction` atau `HandleTransactionAction` yang memuat banyak do
 
 ## 3. Dependency Rules
 
+### Identity and Panel Boundary
+
+- Tenant identity (`User`: Owner/Staff) memakai guard `web` dan surface `/app`.
+- Platform identity (`Admin`: Super Admin/Support) memakai guard `admin` dan surface `/admin`.
+- Hanya panel tenant yang memasang `SetTenantContext` dan menemukan resource operasional toko.
+- Panel platform tidak menemukan resource tenant; support access dan impersonation baru ditambahkan pada Fase 10 dengan audit wajib.
+- Super-admin awal diprovision melalui command interaktif tanpa kredensial default di source control.
+
 ### UI
 
 Boleh:

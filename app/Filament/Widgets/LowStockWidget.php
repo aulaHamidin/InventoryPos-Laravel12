@@ -30,7 +30,7 @@ class LowStockWidget extends BaseWidget
                 ->description('Segera lakukan pembelian ulang')
                 ->descriptionIcon('heroicon-m-exclamation-triangle')
                 ->color('danger')
-                ->url(route('filament.admin.resources.shopping-lists.index')),
+                ->url(route('filament.app.resources.shopping-lists.index')),
         ];
     }
 }

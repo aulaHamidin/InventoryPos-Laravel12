@@ -26,18 +26,25 @@ npm run build
 ./vendor/bin/sail artisan migrate:fresh --seed
 ```
 
-Aplikasi tersedia di `http://127.0.0.1:8000` dan Mailpit di `http://127.0.0.1:8025`.
+Aplikasi tenant tersedia di `http://127.0.0.1:8000/app`, panel platform di `http://127.0.0.1:8000/admin`, dan Mailpit di `http://127.0.0.1:8025`.
 
 Jika UID/GID Linux bukan `1000`, sesuaikan `WWWUSER` dan `WWWGROUP` di `.env` sebelum membangun image.
 `NODE_VERSION=20` dipertahankan sebagai build argument Sail agar container sama dengan runtime Node.js kontraktual.
 
-## Akun demo
+## Akun tenant demo
 
-- Email: `owner@demo.com`
-- Password: `password`
-- Role: Owner
+- Owner: `owner@demo.com` / `password`
+- Staff kontrak: `staff@demo.com` / `password`
 
-Akun ini hanya untuk development. Ganti atau hapus credential demo sebelum deployment production.
+Keduanya hanya untuk development. Staff belum boleh masuk panel pada Fase 0–4. Ganti atau hapus credential demo sebelum deployment production.
+
+Super-admin tidak pernah dibuat oleh seeder. Provisioning awal dilakukan secara interaktif:
+
+```bash
+php artisan admin:create --name="Platform Admin" --email="admin@example.com"
+```
+
+Command meminta password minimal 12 karakter secara tersembunyi. Fitur pengelolaan tenant, subscription, dan billing pada panel platform tetap diselesaikan pada Fase 10.
 
 ## Development melalui WSL host
 

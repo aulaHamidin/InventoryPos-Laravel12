@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Actions\Audit\RecordAuditAction;
 use App\Auth\TenantUserProvider;
+use App\Http\Middleware\SetTenantContext;
 use App\Models\PersonalAccessToken;
 use App\Models\User;
 use App\Services\TenantContext;
@@ -14,6 +15,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Sanctum\Sanctum;
+use Livewire\Livewire;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -23,6 +25,7 @@ class AppServiceProvider extends ServiceProvider
     {
         Auth::provider('tenant_eloquent', fn ($app, array $config) => new TenantUserProvider($app['hash'], $config['model']));
         Sanctum::usePersonalAccessTokenModel(PersonalAccessToken::class);
+        Livewire::addPersistentMiddleware([SetTenantContext::class]);
 
         Event::listen(Login::class, function (Login $event): void {
             if (! $event->user instanceof User || $event->user->tenant === null) {

@@ -3,6 +3,7 @@
 use App\Enums\UserRole;
 use App\Livewire\PosScreen;
 use App\Models\User;
+use App\Services\TenantContext;
 use Livewire\Livewire;
 
 it('renders the Owner POS scanner and keyboard contract while denying Staff', function () {
@@ -16,7 +17,7 @@ it('renders the Owner POS scanner and keyboard contract while denying Staff', fu
     ]);
 
     $this->actingAs($owner)
-        ->get('/pos')
+        ->get('/app/pos')
         ->assertOk()
         ->assertSee('BarcodeDetector', false)
         ->assertSee("event.key === 'F1'", false)
@@ -25,6 +26,10 @@ it('renders the Owner POS scanner and keyboard contract while denying Staff', fu
         ->assertSee('wire:loading.attr="disabled"', false)
         ->assertSee('window.print()', false)
         ->assertSee('Bayar Tunai (F2)');
+
+    // Livewire update requests run through /livewire/update instead of /app/pos.
+    // The persistent middleware must restore the tenant from the session user.
+    TenantContext::clear();
 
     Livewire::actingAs($owner)
         ->test(PosScreen::class)
@@ -42,5 +47,5 @@ it('renders the Owner POS scanner and keyboard contract while denying Staff', fu
         ])
         ->assertSee('Cetak Struk');
 
-    $this->actingAs($staff)->get('/pos')->assertForbidden();
+    $this->actingAs($staff)->get('/app/pos')->assertForbidden();
 });

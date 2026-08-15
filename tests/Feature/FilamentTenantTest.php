@@ -1,6 +1,8 @@
 <?php
 
+use App\Enums\AdminRole;
 use App\Enums\UserRole;
+use App\Models\Admin;
 use App\Models\AuditLog;
 use App\Models\User;
 use App\Services\TenantContext;
@@ -15,7 +17,7 @@ it('isolates Filament records and rejects Staff panel access', function () {
 
     TenantContext::set($tenantA);
     $this->actingAs($ownerA)
-        ->get('/admin/items')
+        ->get('/app/items')
         ->assertOk()
         ->assertSee($itemA->nama)
         ->assertDontSee($itemB->nama);
@@ -27,7 +29,7 @@ it('isolates Filament records and rejects Staff panel access', function () {
         ]);
     });
 
-    $this->actingAs($staff)->get('/admin')->assertForbidden();
+    $this->actingAs($staff)->get('/app')->assertForbidden();
 });
 
 it('audits Filament login and logout events', function () {
@@ -40,11 +42,30 @@ it('audits Filament login and logout events', function () {
 });
 
 it('loads the dedicated Filament theme instead of the Tailwind application entry', function () {
-    $this->get('/admin/login')
+    $this->get('/app/login')
         ->assertOk()
         ->assertSee('/css/filament/admin/theme.css', false)
         ->assertDontSee('/css/filament/filament/app.css', false)
         ->assertDontSee('/resources/css/app.css', false);
+});
+
+it('separates platform Admin and tenant User panels', function () {
+    [, $owner] = makeTenantUser();
+    $admin = Admin::create([
+        'name' => 'Platform Admin',
+        'email' => 'platform-admin@example.test',
+        'password' => 'very-secret-password',
+        'role' => AdminRole::SuperAdmin,
+    ]);
+
+    $this->actingAs($owner)->get('/app')->assertOk();
+    $this->actingAs($owner)->get('/admin')->assertRedirect('/admin/login');
+
+    auth('web')->logout();
+    TenantContext::clear();
+    $this->actingAs($admin, 'admin')->get('/admin')->assertOk();
+    $this->actingAs($admin, 'admin')->get('/app')->assertRedirect('/app/login');
+    $this->actingAs($admin, 'admin')->get('/admin/items')->assertNotFound();
 });
 
 it('builds the Filament theme from the shared semantic tokens', function () {

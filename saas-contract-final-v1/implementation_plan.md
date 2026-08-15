@@ -159,9 +159,10 @@ ip_address, user_agent, metadata (JSON), created_at
 - Shared antara Filament custom theme dan Livewire/Blade views
 
 #### [NEW] Filament Panel Setup
-- `app/Providers/Filament/AdminPanelProvider.php`
+- `app/Providers/Filament/AppPanelProvider.php` — panel tenant `/app`, guard `web`, tenant-aware
+- `app/Providers/Filament/AdminPanelProvider.php` — shell platform `/admin`, guard `admin`, tanpa resource tenant sampai Fase 10
+- Provisioning awal super-admin melalui command interaktif `php artisan admin:create`; tidak ada kredensial admin default di seeder
 - Custom Filament theme menggunakan design tokens yang sama
-- Tenant-aware panel
 
 #### [NEW] Base Livewire Layout
 - `resources/views/layouts/app.blade.php`
@@ -177,14 +178,14 @@ ip_address, user_agent, metadata (JSON), created_at
 - CI config: GitHub Actions (or GitLab CI)
 
 ### Acceptance Criteria
-- [ ] `sail up` berjalan, MySQL + Redis accessible
-- [ ] `sail artisan migrate` reproducible
-- [ ] Tenant context tersedia melalui authenticated user
-- [ ] Request tanpa auth → 401
-- [ ] Request ke tenant lain → 403/404
-- [ ] Audit log tercatat saat login/logout
-- [ ] Filament panel accessible untuk owner
-- [ ] Design tokens konsisten antara Filament dan Blade
+- [x] `sail up` berjalan, MySQL + Redis accessible
+- [x] `sail artisan migrate` reproducible
+- [x] Tenant context tersedia melalui authenticated user
+- [x] Request tanpa auth → 401
+- [x] Request ke tenant lain → 403/404
+- [x] Audit log tercatat saat login/logout
+- [x] Filament panel `/app` accessible untuk Owner dan terisolasi dari panel platform `/admin`
+- [x] Design tokens konsisten antara Filament dan Blade
 
 ---
 
@@ -257,12 +258,12 @@ new_avg = ((old_stock × old_avg) + (in_qty × in_cost)) / (old_stock + in_qty)
 | Preferred supplier concurrency | Concurrency |
 
 ### Acceptance
-- [ ] Tenant A tidak bisa akses data Tenant B
-- [ ] FK tenant-scoped dari tenant lain → 403/404
-- [ ] Concurrent stock mutation aman
-- [ ] MAC calculation benar untuk semua edge case
-- [ ] Max 1 preferred supplier terjamin
-- [ ] **Tidak ada UI yang mengubah `stok_saat_ini` langsung**
+- [x] Tenant A tidak bisa akses data Tenant B
+- [x] FK tenant-scoped dari tenant lain → 403/404
+- [x] Concurrent stock mutation aman
+- [x] MAC calculation benar untuk semua edge case
+- [x] Max 1 preferred supplier terjamin
+- [x] **Tidak ada UI yang mengubah `stok_saat_ini` langsung**
 
 ---
 
@@ -316,13 +317,18 @@ new_avg = ((old_stock × old_avg) + (in_qty × in_cost)) / (old_stock + in_qty)
 | Server-side calculation | Client total ignored, server recalculates |
 
 ### MVP Release Gate
-- Owner-only (no staff yet)
-- Billing admin-managed
-- Tenant onboarding manual
+- [x] Owner-only (Staff belum diaktifkan)
+- [x] Billing admin-managed
+- [x] Tenant onboarding manual
+- [x] Checkout, pembayaran tunai, idempotency, concurrency, receipt, print, dan walkthrough desktop/mobile lulus
 
 ---
 
 ## Fase 3 — Reports & Export *(Parallel setelah F1)*
+
+### Completion
+- [x] Report stok, movement, dan POS tenant-scoped tersedia dengan filter
+- [x] Export PDF/XLSX queued, progress, private download, print, serta pembatasan Staff lulus
 
 ### Deliverables
 - Stock report Livewire page (tenant-scoped)
@@ -336,6 +342,10 @@ new_avg = ((old_stock × old_avg) + (in_qty × in_cost)) / (old_stock + in_qty)
 ---
 
 ## Fase 4 — Low Stock & Shopping *(Parallel setelah F1)*
+
+### Completion
+- [x] Low-stock widget dan lifecycle generate/submit/receive Shopping List lulus
+- [x] Ownership, one-time receive, concurrency, desktop, dan mobile walkthrough lulus
 
 ### Deliverables
 - Low stock alert dashboard widget
@@ -567,7 +577,7 @@ Fresh migration, test contract, tenant/policy fail-closed, concurrency test, API
 
 ## Repair Execution Result - 2026-08-11
 
-Status: implementation Fase 0-4 selesai secara kode; automated gate dan runtime Sail lulus. Checkbox fase tetap tidak dicentang sampai visual walkthrough dan satu run CI remote di bawah lulus.
+Status: **SELESAI**. Fase 0–4 lulus automated, runtime, visual, security contract, dan CI gate. Fase berikutnya boleh dimulai.
 
 ### Backup evidence
 
@@ -580,11 +590,11 @@ Status: implementation Fase 0-4 selesai secara kode; automated gate dan runtime 
 ### Automated gate passed
 
 - Runtime test: PHP 8.3.33 CLI WSL + MySQL 8.4.
-- `migrate:fresh --seed --force`: lulus; seeder hanya tenant demo dan Owner.
-- Pest: 44 tests, 202 assertions, seluruhnya lulus.
+- `migrate:fresh --seed --force`: lulus; seeder hanya tenant demo, Owner, dan Staff untuk pengujian kontrak akses.
+- Pest terbaru setelah pemisahan panel: 47 tests, 217 assertions, seluruhnya lulus.
 - True multi-process concurrency: checkout idempotency, Pay Cash, preferred supplier, dan Shopping List receive lulus.
 - `composer validate --strict` dan `composer check-platform-reqs`: lulus.
-- Laravel Pint: 169 files lulus.
+- Laravel Pint: 173 files lulus.
 - Vite production build: lulus tanpa warning.
 - Blade cache: lulus.
 - Route audit: 23 endpoint `/api/v1`; tidak ada create/edit route untuk histori; Report Export progress page tersedia.
@@ -598,16 +608,17 @@ Status: implementation Fase 0-4 selesai secara kode; automated gate dan runtime 
 - Image `sail-8.3/app` (`a36809295b86`) berhasil dibangun dan menjalankan PHP 8.3.33 serta Node.js 20.20.2.
 - `laravel.test`, dedicated Redis queue worker, MySQL 8.4, Redis, dan Mailpit berjalan melalui Compose.
 - Fresh migration/seed MySQL `testing` dan seluruh 44 test/202 assertion lulus dari dalam Sail.
-- `/admin/login` dan custom Filament theme menghasilkan HTTP 200 dari container; request `/api/v1/items` tanpa token menghasilkan 401.
+- `/app/login` tenant dan `/admin/login` platform menghasilkan HTTP 200; request `/api/v1/items` tanpa token menghasilkan 401.
 - Server Sail memakai `artisan serve --no-reload` agar override `DB_HOST=mysql` dan `REDIS_HOST=redis` diteruskan ke child PHP server, sementara CLI WSL tetap memakai `127.0.0.1`.
 
-### Gate still open
+### Gate closure — 2026-08-15
 
-1. Walkthrough visual desktop/mobile Owner dan Staff belum dapat dijalankan karena browser in-app tidak terhubung (`No browser is available`). Contract HTTP/render sudah diuji otomatis, tetapi screenshot/evidence visual tetap wajib.
+1. Walkthrough visual desktop/mobile Owner dan kontrak penolakan Staff selesai; 13 screenshot/evidence tersimpan di `docs/evidence/f0-f4-visual-2026-08-15`.
+2. Login Staff ditolak dengan pesan generik tanpa sesi; request Staff autentik ke panel tenant, POS, laporan, export, dan download privat menghasilkan 403 tanpa kebocoran finansial. Ini adalah kontrak Fase 0–4; aktivasi Staff dilakukan pada Fase 8.
+3. Panel tenant dipisahkan ke `/app` dengan guard `web`; shell platform `/admin` memakai guard `admin` dan tidak menemukan resource tenant. Provisioning super-admin tersedia melalui `php artisan admin:create`; fitur admin pusat tetap Fase 10.
+4. Gate CI remote lulus pada run `31836543172` dan `31836714932`. Gate lokal terbaru juga lulus setelah refactor panel.
 
-2. Repository GitHub `aulaHamidin/InventoryPos-Laravel12` sudah terhubung dan branch `main` telah dipush pada commit `204c0fa`. Workflow `.github/workflows/ci.yml` sudah terpicu, tetapi hasil run remote belum dapat diverifikasi karena repository privat belum dapat diperiksa tanpa sesi GitHub terautentikasi.
-
-Fase 5 tetap dibekukan. Fase 0-4 baru boleh dicentang setelah dua gate eksternal di atas ditutup.
+**Fase 0–4 ditutup. Fase berikutnya boleh dimulai sesuai dependency graph.**
 
 ### Runtime hostname correction - 2026-08-12
 

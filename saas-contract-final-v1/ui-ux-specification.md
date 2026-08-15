@@ -1393,6 +1393,13 @@ Guidance tidak boleh menciptakan business requirement baru.
 
 # 40. Authentication & Security UX
 
+Authentication surface dipisahkan berdasarkan identity boundary:
+
+- `/app/login` untuk Owner dan, setelah Fase 8, Staff/Kasir tenant;
+- `/admin/login` untuk Super Admin/Support platform;
+- pesan penolakan login tidak boleh mengungkap keberadaan akun;
+- unauthorized state setelah autentikasi tetap mengikuti policy HTTP 403.
+
 UI harus mendukung:
 
 - login;

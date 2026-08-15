@@ -106,7 +106,7 @@ class ShoppingListResource extends Resource
                 Tables\Actions\Action::make('receive')
                     ->label('Terima Barang')->icon('heroicon-o-inbox-arrow-down')->color('success')
                     ->visible(fn (ShoppingList $record): bool => $record->status === ShoppingListStatus::Purchased)
-                    ->url(fn (ShoppingList $record): string => route('filament.admin.pages.receive-shopping-list', ['list' => $record->id])),
+                    ->url(fn (ShoppingList $record): string => route('filament.app.pages.receive-shopping-list', ['list' => $record->id])),
                 Tables\Actions\ViewAction::make(),
             ])
             ->bulkActions([]);
