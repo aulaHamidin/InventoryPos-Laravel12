@@ -616,7 +616,7 @@ Status: **SELESAI**. Fase 0–4 lulus automated, runtime, visual, security contr
 1. Walkthrough visual desktop/mobile Owner dan kontrak penolakan Staff selesai; 13 screenshot/evidence tersimpan di `docs/evidence/f0-f4-visual-2026-08-15`.
 2. Login Staff ditolak dengan pesan generik tanpa sesi; request Staff autentik ke panel tenant, POS, laporan, export, dan download privat menghasilkan 403 tanpa kebocoran finansial. Ini adalah kontrak Fase 0–4; aktivasi Staff dilakukan pada Fase 8.
 3. Panel tenant dipisahkan ke `/app` dengan guard `web`; shell platform `/admin` memakai guard `admin` dan tidak menemukan resource tenant. Provisioning super-admin tersedia melalui `php artisan admin:create`; fitur admin pusat tetap Fase 10.
-4. Gate CI remote lulus pada run `31836543172` dan `31836714932`. Gate lokal terbaru juga lulus setelah refactor panel.
+4. Gate CI remote terbaru lulus pada run `31865968011` untuk commit refactor panel `a8395c6`; gate lokal terbaru juga lulus.
 
 **Fase 0–4 ditutup. Fase berikutnya boleh dimulai sesuai dependency graph.**
 

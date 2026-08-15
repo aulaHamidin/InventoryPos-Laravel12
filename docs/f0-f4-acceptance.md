@@ -83,5 +83,5 @@ Catat tanggal, browser/device, actor, hasil, dan screenshot/evidence untuk setia
 - Staff: login `staff.visual@demo.com` ditolak dengan pesan kredensial generik tanpa membentuk sesi. Setelah sesi uji didemote ke role Staff, seluruh panel tenant, POS, laporan, status export, dan download privat menghasilkan 403 tanpa purchase cost, average cost, margin, profit, atau inventory value. Kontrak ini diterima untuk Fase 0–4 karena Staff baru diaktifkan pada Fase 8.
 - Panel dipisahkan setelah walkthrough: tenant memakai `/app` dengan guard `web` dan `SetTenantContext`; platform memakai `/admin` dengan guard `admin`, tanpa resource tenant. Route dan isolasi kedua guard diverifikasi otomatis.
 - Screenshot walkthrough tersimpan di [`docs/evidence/f0-f4-visual-2026-08-15`](evidence/f0-f4-visual-2026-08-15/).
-- Repository GitHub `aulaHamidin/InventoryPos-Laravel12` tersedia sebagai repository publik; branch `main` sinkron pada commit `dc0f2ee`.
-- GitHub Actions run `31836543172` untuk commit `204c0fa` dan run `31836714932` untuk commit `dc0f2ee` selesai dengan status `success` pada 2026-08-15 WIB.
+- Repository GitHub `aulaHamidin/InventoryPos-Laravel12` tersedia sebagai repository publik; refactor panel dan penutupan Fase 0–4 dipush pada commit `a8395c6`.
+- GitHub Actions run `31865968011` untuk commit `a8395c6` selesai dengan status `success` pada 2026-08-15 WIB.
