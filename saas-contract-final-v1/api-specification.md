@@ -413,6 +413,8 @@ Full:
 }
 ```
 
+Session membership dibuat dari item aktif dan non-deleted dalam scope lalu dibekukan. Scope tanpa item menghasilkan validation error 422.
+
 ### `GET /opname`
 
 ### `PUT /opname/{id}/details`
@@ -439,6 +441,8 @@ Response includes:
   "counted_at": "..."
 }
 ```
+
+`qty_fisik` wajib integer `>= 0` dan `item_id` tidak boleh duplikat dalam satu request. Save pertama mengunci snapshot/count timestamp; save berikutnya hanya mengoreksi physical quantity dan note.
 
 ### `POST /opname/{id}/finalize`
 

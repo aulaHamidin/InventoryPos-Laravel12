@@ -838,6 +838,8 @@ Input qty harus dominan secara visual.
 
 User tidak boleh dipaksa kembali ke list setelah setiap item.
 
+Daftar item dibekukan saat sesi dibuat. Qty fisik menerima nol. Koreksi item yang telah dihitung mempertahankan snapshot dan waktu count pertama.
+
 ---
 
 ## 22.2 Finalization

@@ -262,6 +262,11 @@ Movement type:
 | total_amount | DECIMAL(15,2) | server calculated |
 | idempotency_key | VARCHAR(255) | unique per tenant |
 | completed_at | TIMESTAMP | nullable |
+
+Checks:
+
+- `partial` wajib memiliki `rack_id`; `full` wajib memiliki `rack_id = null`.
+- `draft` memiliki `completed_at = null`; `completed` memiliki `completed_at` non-null.
 | created_at | TIMESTAMP | |
 | updated_at | TIMESTAMP | |
 
@@ -366,6 +371,12 @@ QR generation metadata yang diperlukan untuk provider dapat disimpan pada kolom 
 Unique:
 
 `UNIQUE(stock_opname_id, item_id)`.
+
+Checks:
+
+- `qty_fisik` nullable atau integer non-negatif.
+- `qty_sistem_at_count`, `qty_fisik`, dan `counted_at` harus null atau non-null bersama.
+- Snapshot dan `counted_at` pertama tidak berubah saat count dikoreksi.
 
 ---
 

@@ -16,4 +16,9 @@ class Rack extends Model
     {
         return $this->hasMany(Item::class);
     }
+
+    public function stockOpnames(): HasMany
+    {
+        return $this->hasMany(StockOpname::class);
+    }
 }

@@ -56,6 +56,11 @@ class Item extends Model
         return $this->hasMany(StockMovement::class);
     }
 
+    public function stockOpnameDetails(): HasMany
+    {
+        return $this->hasMany(StockOpnameDetail::class);
+    }
+
     public function suppliers(): BelongsToMany
     {
         return $this->belongsToMany(Supplier::class, 'item_suppliers')

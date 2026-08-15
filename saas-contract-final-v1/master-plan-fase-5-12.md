@@ -188,10 +188,10 @@ Menyediakan stock opname parsial per rak dan full count yang tetap konsisten saa
 
 ### 5.5 Exit checklist
 
-- [ ] Schema dan invariant F5 lulus.
-- [ ] Concurrency dan time-aware test lulus.
-- [ ] API dan UI contract lulus.
-- [ ] Visual evidence desktop/mobile lengkap.
+- [x] Schema dan invariant F5 lulus.
+- [x] Concurrency dan time-aware test lulus.
+- [x] API dan UI contract lulus.
+- [x] Visual evidence desktop/mobile lengkap.
 - [ ] Full quality gate dan CI remote hijau.
 - [ ] Fase 5 ditandai selesai di execution plan.
 

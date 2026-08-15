@@ -88,13 +88,36 @@ function shoppingConcurrencyFixture(): array
     return array_merge($fixture, compact('supplierId', 'shoppingListId', 'shoppingListItemId'));
 }
 
+function opnameConcurrencyFixture(bool $counted = false): array
+{
+    $fixture = concurrencyFixture();
+    $pdo = $fixture['pdo'];
+
+    $pdo->prepare('INSERT INTO racks (tenant_id, kode, nama, created_at, updated_at) VALUES (?, ?, ?, ?, ?)')
+        ->execute([$fixture['tenantId'], "RACK-{$fixture['suffix']}", 'Concurrent Rack', $fixture['now'], $fixture['now']]);
+    $rackId = (int) $pdo->lastInsertId();
+    $pdo->prepare('UPDATE items SET rack_id = ? WHERE id = ?')->execute([$rackId, $fixture['itemId']]);
+
+    $pdo->prepare('INSERT INTO stock_opnames (tenant_id, created_by, scope_type, rack_id, status, started_at) VALUES (?, ?, ?, ?, ?, ?)')
+        ->execute([$fixture['tenantId'], $fixture['userId'], 'partial', $rackId, 'draft', $fixture['now']]);
+    $opnameId = (int) $pdo->lastInsertId();
+    $pdo->prepare('INSERT INTO stock_opname_details (tenant_id, stock_opname_id, item_id, qty_sistem_at_count, qty_fisik, counted_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+        ->execute([
+            $fixture['tenantId'], $opnameId, $fixture['itemId'],
+            $counted ? 10 : null, $counted ? 8 : null, $counted ? $fixture['now'] : null,
+            $fixture['now'], $fixture['now'],
+        ]);
+
+    return array_merge($fixture, compact('rackId', 'opnameId'));
+}
+
 function cleanupConcurrencyFixture(array $fixture): void
 {
     $pdo = concurrencyPdo();
     foreach ([
-        'audit_logs', 'pos_payments', 'item_stock_movements', 'pos_transaction_items',
+        'audit_logs', 'pos_payments', 'item_stock_movements', 'stock_opname_details', 'stock_opnames', 'pos_transaction_items',
         'pos_transactions', 'shopping_list_items', 'shopping_lists', 'item_suppliers',
-        'suppliers', 'items', 'categories', 'users', 'tenants',
+        'suppliers', 'items', 'racks', 'categories', 'users', 'tenants',
     ] as $table) {
         $column = $table === 'tenants' ? 'id' : 'tenant_id';
         $pdo->prepare("DELETE FROM {$table} WHERE {$column} = ?")->execute([$fixture['tenantId']]);
@@ -199,6 +222,123 @@ it('allows only one of two truly concurrent shopping list receives', function ()
             $statement->execute([$parameter]);
             expect((int) $statement->fetchColumn())->toBe($expected);
         }
+    } finally {
+        cleanupConcurrencyFixture($fixture);
+    }
+});
+
+it('serializes same-rack opname creation while allowing different rack sessions', function () {
+    $fixture = concurrencyFixture();
+    $pdo = $fixture['pdo'];
+    $rackIds = [];
+    foreach (['A', 'B'] as $label) {
+        $pdo->prepare('INSERT INTO racks (tenant_id, kode, nama, created_at, updated_at) VALUES (?, ?, ?, ?, ?)')
+            ->execute([$fixture['tenantId'], "{$label}-{$fixture['suffix']}", "Rack {$label}", $fixture['now'], $fixture['now']]);
+        $rackIds[] = (int) $pdo->lastInsertId();
+    }
+    $pdo->prepare('UPDATE items SET rack_id = ? WHERE id = ?')->execute([$rackIds[0], $fixture['itemId']]);
+    $pdo->prepare('INSERT INTO items (tenant_id, category_id, rack_id, kode, nama, satuan, harga_beli, average_cost, harga_jual, stok_saat_ini, stok_minimal, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 50, 50, 100, 10, 0, ?, ?)')
+        ->execute([$fixture['tenantId'], $fixture['categoryId'], $rackIds[1], "ITM-B-{$fixture['suffix']}", 'Concurrent Item B', 'Pcs', $fixture['now'], $fixture['now']]);
+
+    $commandA = [PHP_BINARY, base_path('tests/Support/concurrent-pos-worker.php'), 'opname-create',
+        (string) $fixture['tenantId'], (string) $fixture['userId'], (string) $rackIds[0], 'partial'];
+    $commandB = [PHP_BINARY, base_path('tests/Support/concurrent-pos-worker.php'), 'opname-create',
+        (string) $fixture['tenantId'], (string) $fixture['userId'], (string) $rackIds[1], 'partial'];
+
+    try {
+        $sameRack = runConcurrentWorkers([$commandA, $commandA]);
+        expect(collect($sameRack)->filter(fn (string $value): bool => $value === 'OPNAME_SCOPE_CONFLICT'))->toHaveCount(1);
+
+        $differentRack = runConcurrentWorkers([$commandB]);
+        expect(is_numeric($differentRack[0]))->toBeTrue();
+    } finally {
+        cleanupConcurrencyFixture($fixture);
+    }
+});
+
+it('allows exactly one concurrent full versus partial opname creation', function () {
+    $fixture = concurrencyFixture();
+    $pdo = $fixture['pdo'];
+    $pdo->prepare('INSERT INTO racks (tenant_id, kode, nama, created_at, updated_at) VALUES (?, ?, ?, ?, ?)')
+        ->execute([$fixture['tenantId'], "FP-{$fixture['suffix']}", 'Full Partial Rack', $fixture['now'], $fixture['now']]);
+    $rackId = (int) $pdo->lastInsertId();
+    $pdo->prepare('UPDATE items SET rack_id = ? WHERE id = ?')->execute([$rackId, $fixture['itemId']]);
+
+    $partial = [PHP_BINARY, base_path('tests/Support/concurrent-pos-worker.php'), 'opname-create',
+        (string) $fixture['tenantId'], (string) $fixture['userId'], (string) $rackId, 'partial'];
+    $full = [PHP_BINARY, base_path('tests/Support/concurrent-pos-worker.php'), 'opname-create',
+        (string) $fixture['tenantId'], (string) $fixture['userId'], '0', 'full'];
+
+    try {
+        $outcomes = runConcurrentWorkers([$partial, $full]);
+        expect(collect($outcomes)->filter(fn (string $value): bool => $value === 'OPNAME_SCOPE_CONFLICT'))->toHaveCount(1)
+            ->and(collect($outcomes)->filter(fn (string $value): bool => is_numeric($value)))->toHaveCount(1);
+    } finally {
+        cleanupConcurrencyFixture($fixture);
+    }
+});
+
+it('allows exactly one of two concurrent full opname creations', function () {
+    $fixture = concurrencyFixture();
+    $full = [PHP_BINARY, base_path('tests/Support/concurrent-pos-worker.php'), 'opname-create',
+        (string) $fixture['tenantId'], (string) $fixture['userId'], '0', 'full'];
+
+    try {
+        $outcomes = runConcurrentWorkers([$full, $full]);
+        expect(collect($outcomes)->filter(fn (string $value): bool => $value === 'OPNAME_SCOPE_CONFLICT'))->toHaveCount(1)
+            ->and(collect($outcomes)->filter(fn (string $value): bool => is_numeric($value)))->toHaveCount(1);
+    } finally {
+        cleanupConcurrencyFixture($fixture);
+    }
+});
+
+it('makes concurrent opname finalization exactly once', function () {
+    $fixture = opnameConcurrencyFixture(true);
+    $command = [PHP_BINARY, base_path('tests/Support/concurrent-pos-worker.php'), 'opname-finalize',
+        (string) $fixture['tenantId'], (string) $fixture['userId'], (string) $fixture['opnameId'], '-'];
+
+    try {
+        $outcomes = runConcurrentWorkers([$command, $command]);
+        sort($outcomes);
+        expect($outcomes)->toBe(['INVALID_STATE_TRANSITION', 'completed']);
+
+        $pdo = concurrencyPdo();
+        foreach ([
+            ['SELECT COUNT(*) FROM item_stock_movements WHERE tenant_id = ? AND movement_type = "opname_adjustment"', $fixture['tenantId'], 1],
+            ['SELECT stok_saat_ini FROM items WHERE id = ?', $fixture['itemId'], 8],
+        ] as [$sql, $parameter, $expected]) {
+            $statement = $pdo->prepare($sql);
+            $statement->execute([$parameter]);
+            expect((int) $statement->fetchColumn())->toBe($expected);
+        }
+    } finally {
+        cleanupConcurrencyFixture($fixture);
+    }
+});
+
+it('serializes first count snapshot with a concurrent stock movement', function () {
+    $fixture = opnameConcurrencyFixture(false);
+    $count = [PHP_BINARY, base_path('tests/Support/concurrent-pos-worker.php'), 'opname-count',
+        (string) $fixture['tenantId'], (string) $fixture['userId'], (string) $fixture['opnameId'], (string) $fixture['itemId'], '8'];
+    $stockOut = [PHP_BINARY, base_path('tests/Support/concurrent-pos-worker.php'), 'stock-out',
+        (string) $fixture['tenantId'], (string) $fixture['userId'], (string) $fixture['itemId'], '1'];
+
+    try {
+        $outcomes = runConcurrentWorkers([$count, $stockOut]);
+        sort($outcomes);
+        expect($outcomes)->toBe(['counted', 'stocked-out']);
+
+        $pdo = concurrencyPdo();
+        $statement = $pdo->prepare('SELECT qty_sistem_at_count FROM stock_opname_details WHERE stock_opname_id = ?');
+        $statement->execute([$fixture['opnameId']]);
+        $snapshot = (int) $statement->fetchColumn();
+        expect($snapshot)->toBeIn([9, 10]);
+
+        runConcurrentWorkers([[PHP_BINARY, base_path('tests/Support/concurrent-pos-worker.php'), 'opname-finalize',
+            (string) $fixture['tenantId'], (string) $fixture['userId'], (string) $fixture['opnameId'], '-']]);
+        $statement = $pdo->prepare('SELECT stok_saat_ini FROM items WHERE id = ?');
+        $statement->execute([$fixture['itemId']]);
+        expect((int) $statement->fetchColumn())->toBe(9 + (8 - $snapshot));
     } finally {
         cleanupConcurrencyFixture($fixture);
     }

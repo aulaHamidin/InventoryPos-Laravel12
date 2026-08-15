@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\InventoryController;
 use App\Http\Controllers\Api\ItemSupplierController;
 use App\Http\Controllers\Api\PosController;
 use App\Http\Controllers\Api\ShoppingListController;
+use App\Http\Controllers\Api\StockOpnameController;
 use App\Http\Controllers\ReportController;
 use App\Http\Middleware\SetTenantContext;
 use Illuminate\Support\Facades\Route;
@@ -26,6 +27,11 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/stock/movements/in', [InventoryController::class, 'stockIn']);
         Route::post('/stock/movements/out', [InventoryController::class, 'stockOut']);
         Route::post('/stock/movements/adjustment', [InventoryController::class, 'adjustStock']);
+
+        Route::get('/opname', [StockOpnameController::class, 'index']);
+        Route::post('/opname', [StockOpnameController::class, 'store']);
+        Route::put('/opname/{id}/details', [StockOpnameController::class, 'updateDetails']);
+        Route::post('/opname/{id}/finalize', [StockOpnameController::class, 'finalize']);
 
         Route::post('/pos/checkout', [PosController::class, 'checkout']);
         Route::post('/pos/transactions/{id}/pay-cash', [PosController::class, 'payCash']);

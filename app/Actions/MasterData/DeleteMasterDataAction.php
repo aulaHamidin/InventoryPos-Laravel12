@@ -7,6 +7,7 @@ use App\Models\Category;
 use App\Models\Rack;
 use App\Models\ShoppingListItem;
 use App\Models\StockMovement;
+use App\Models\StockOpname;
 use App\Models\Supplier;
 use App\Models\User;
 use App\Support\AuditContext;
@@ -32,7 +33,9 @@ class DeleteMasterDataAction
         DB::transaction(function () use ($modelClass, $id, $actor, $context): void {
             $model = $modelClass::whereKey($id)->lockForUpdate()->firstOrFail();
             $inUse = match ($modelClass) {
-                Category::class, Rack::class => $model->items()->withTrashed()->exists(),
+                Category::class => $model->items()->withTrashed()->exists(),
+                Rack::class => $model->items()->withTrashed()->exists()
+                    || StockOpname::where('rack_id', $model->getKey())->exists(),
                 Supplier::class => $model->itemSupplierLinks()->exists()
                     || StockMovement::where('supplier_id', $model->getKey())->exists()
                     || ShoppingListItem::where('supplier_id', $model->getKey())->exists(),

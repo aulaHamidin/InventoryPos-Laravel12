@@ -1,6 +1,10 @@
 <?php
 
 use App\Actions\Inventory\SetPreferredSupplierAction;
+use App\Actions\Inventory\StockOutAction;
+use App\Actions\Opname\CreateOpnameAction;
+use App\Actions\Opname\FinalizeOpnameAction;
+use App\Actions\Opname\SaveOpnameCountAction;
 use App\Actions\Pos\CheckoutPosAction;
 use App\Actions\Pos\PayCashAction;
 use App\Actions\Shopping\ReceiveShoppingListAction;
@@ -15,7 +19,7 @@ require dirname(__DIR__, 2).'/vendor/autoload.php';
 $app = require dirname(__DIR__, 2).'/bootstrap/app.php';
 $app->make(Kernel::class)->bootstrap();
 
-[$script, $mode, $tenantId, $userId, $targetId, $key] = array_pad($argv, 6, null);
+[$script, $mode, $tenantId, $userId, $targetId, $key, $value] = array_pad($argv, 7, null);
 
 try {
     $tenant = Tenant::findOrFail((int) $tenantId);
@@ -42,6 +46,25 @@ try {
             'harga_satuan' => '80.00',
         ]], $owner);
         echo 'completed';
+    } elseif ($mode === 'opname-create') {
+        $opname = app(CreateOpnameAction::class)->execute(
+            (string) $key,
+            $owner,
+            (int) $targetId > 0 ? (int) $targetId : null,
+        );
+        echo $opname->id;
+    } elseif ($mode === 'opname-count') {
+        app(SaveOpnameCountAction::class)->execute((int) $targetId, [[
+            'item_id' => (int) $key,
+            'qty_fisik' => (int) $value,
+        ]], $owner);
+        echo 'counted';
+    } elseif ($mode === 'opname-finalize') {
+        app(FinalizeOpnameAction::class)->execute((int) $targetId, $owner);
+        echo 'completed';
+    } elseif ($mode === 'stock-out') {
+        app(StockOutAction::class)->execute((int) $targetId, (int) $key, $owner);
+        echo 'stocked-out';
     } else {
         throw new InvalidArgumentException('Unknown worker mode.');
     }

@@ -542,6 +542,8 @@ Constraint:
 - full tidak boleh overlap dengan partial aktif;
 - partial antar rack berbeda boleh paralel.
 
+Membership sesi berasal dari item aktif dan non-deleted dalam scope saat create dan tidak berubah setelah detail dibuat. Scope kosong ditolak.
+
 ### Detail
 
 Saat item dihitung:
@@ -552,6 +554,8 @@ qty_sistem_at_count = stok_saat_ini
 counted_at = now
 qty_fisik = input
 ```
+
+`qty_fisik` wajib integer non-negatif. Save pertama mengunci snapshot dan `counted_at`; save berikutnya hanya mengoreksi `qty_fisik` dan `note`.
 
 Finalize:
 

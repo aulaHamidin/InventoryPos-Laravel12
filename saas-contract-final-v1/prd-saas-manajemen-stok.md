@@ -333,6 +333,10 @@ Sesi `full` tidak boleh berjalan bersamaan dengan partial.
 
 Partial boleh paralel jika rak berbeda.
 
+Membership sesi diambil dari item aktif dan non-deleted saat sesi dibuat, lalu dibekukan sampai finalisasi. Item baru atau perubahan rak/status setelah create tidak mengubah daftar detail.
+
+Save pertama mengunci `qty_sistem_at_count` dan `counted_at`. Koreksi berikutnya hanya mengubah `qty_fisik` dan `note`. `qty_fisik` adalah integer non-negatif dan scope tanpa item valid ditolak.
+
 ### 6.9 Supplier
 
 Satu item dapat memiliki banyak supplier.
