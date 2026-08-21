@@ -578,7 +578,7 @@ Fase 5 tidak boleh dimulai sebelum acceptance dan testing contract Fase 0-4 lulu
 
 - Fase 5: stock opname.
 - Fase 6: manual QRIS/transfer, expiry, void, return, refund, history/reporting.
-- Fase 7: CD-7.1 serta implementation plan telah disahkan; implementasi Analytics dan Smart Threshold sedang menjalani acceptance gate.
+- Fase 7: CD-7.1 serta implementation plan telah disahkan; implementasi Analytics dan Smart Threshold selesai untuk implementasi/CI. Deployment dan backfill ditunda ke gate release v1.
 - Fase 8: aktivasi Staff dan multi-kasir.
 - Fase 10+: billing, platform admin, impersonation, deletion.
 

@@ -1,15 +1,16 @@
 # Fase 7 Acceptance — Analytics & Smart Threshold
 
-Status: **IMPLEMENTASI LOKAL LULUS — MENUNGGU CI REMOTE**
+Status: **FASE 7 SELESAI — DEPLOYMENT DITUNDA KE RELEASE V1**
 
-Revalidasi terakhir: 2026-08-20 (`Asia/Jakarta`)
+Penutupan CI: 2026-08-21 (`Asia/Jakarta`)
 
 ## Baseline dan kontrak
 
 - Baseline CD-7.1: `e72ef073e517051f272a6a12cd973d6fc0946ce9`.
 - Document Delta: `saas-contract-final-v1/document-delta-f7-analytics-smart-threshold.md`.
 - Implementation plan: `saas-contract-final-v1/implementation-plan-fase-7.md` dengan status **DISETUJUI UNTUK IMPLEMENTASI**.
-- Working tree masih berupa increment implementasi yang belum di-commit; karena itu SHA implementasi dan CI run belum tersedia.
+- Commit implementasi: `15026f27e92c951f3439f35d1bcab63bccc41b01` pada branch `codex/fase-7-analytics`.
+- CI remote: workflow `CI` run `32498846602`; job `test` dan `analytics-runtime` keduanya sukses.
 
 ## Runtime lokal
 
@@ -58,13 +59,13 @@ Index dan screenshot berada di `docs/evidence/f7-analytics-2026-08-16/`.
 - [x] Harness fresh/upgrade/rollback migration lulus; rollback dicatat lossy.
 - [x] Quality checks: Composer validate/platform, Pint, Node test/build, Blade cache, route list, schedule list, dan Compose validation.
 - [x] Walkthrough UI lokal tersedia pada evidence desktop/mobile.
-- [ ] Commit increment implementasi dan catat SHA final.
-- [ ] Push branch/PR dan pastikan job CI `test` serta `analytics-runtime` hijau.
-- [ ] Tandai Fase 7 selesai dan mulai Fase 8 setelah kedua gate CI di atas lulus.
+- [x] Commit increment implementasi dan catat SHA final.
+- [x] Push branch/PR; job CI `test` serta `analytics-runtime` hijau.
+- [x] Fase 7 selesai; Fase 8 boleh dimulai.
 
 ## Deployment release v1 yang ditunda
 
 - [ ] Pada environment target: verifikasi Redis production, worker/scheduler supervisor, jalankan backfill, retry failure bila ada, lalu jalankan `analytics:status --fail-on-incomplete`.
 - [ ] Jangan menyatakan release v1 siap sebelum deployment/backfill F7 di atas terbukti.
 
-Keputusan: implementasi lokal siap diajukan ke CI. Fase 7 **belum ditandai selesai** sampai CI remote terbukti. Deployment F7 tidak dibutuhkan untuk memulai Fase 8, tetapi tetap merupakan gate wajib release v1.
+Keputusan: Fase 7 selesai untuk implementasi dan CI. Deployment F7 tidak dibutuhkan untuk memulai Fase 8, tetapi tetap merupakan gate wajib release v1.

@@ -339,8 +339,8 @@ threshold = ceil(avg_daily_out × (effective_lead_time_days + safety_stock_days)
 - [x] Redis runtime, migration fresh/upgrade/rollback, dan local backfill status lulus.
 - [x] Visual evidence lengkap.
 - [x] Full quality gate lokal lulus.
-- [ ] Commit/push serta CI remote `test` dan `analytics-runtime` hijau.
-- [ ] Fase 7 ditandai selesai.
+- [x] Commit/push serta CI remote `test` dan `analytics-runtime` hijau.
+- [x] Fase 7 ditandai selesai.
 
 Deployment/backfill analytics pada environment target ditunda ke release v1. Gate tersebut wajib diselesaikan sebelum release v1 dinyatakan siap, tetapi bukan blocker untuk memulai Fase 8 setelah CI remote Fase 7 hijau.
 
@@ -716,7 +716,7 @@ Evidence tidak boleh memuat `.env`, secret, access token, OTP nyata, webhook sig
 
 - [x] Fase 5 — Cycle Counting.
 - [x] Fase 6 — POS Lengkap & Pembayaran Manual Non-Tunai.
-- [ ] Fase 7 — Analytics & Smart Threshold.
+- [x] Fase 7 — Analytics & Smart Threshold.
 - [ ] Fase 8 — Staff & Multi-Kasir.
 - [ ] Fase 9 — Hardening & Pilot.
 - [ ] Fase 10 — Billing MRR & Admin Pusat.
@@ -735,4 +735,4 @@ Evidence tidak boleh memuat `.env`, secret, access token, OTP nyata, webhook sig
 
 ## 16. Langkah Berikutnya
 
-Implementasi lokal Fase 7 dan evidence telah lulus. Langkah berikutnya adalah commit/push increment dan memastikan job CI `test` serta `analytics-runtime` hijau. Setelah itu Fase 7 dapat ditutup dan Fase 8 dimulai; deployment/backfill Fase 7 tetap wajib pada gate release v1.
+Fase 7 telah selesai untuk implementasi dan CI. Langkah berikutnya adalah menyusun serta mengesahkan implementation plan Fase 8 — Staff & Multi-Kasir, lalu memulai implementasinya. Deployment/backfill Fase 7 tetap wajib pada gate release v1.
