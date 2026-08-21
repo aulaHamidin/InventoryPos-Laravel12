@@ -410,6 +410,8 @@ CD-8.1 disahkan pada baseline `ad07521fbdf81ccf5a3fe9185fecac5eb96fa01e`: Owner-
 
 ## 9. Fase 9 — Hardening & Pilot
 
+Baseline resmi Fase 9: merge Fase 8 pada `main`, SHA `98e1d8775265ab7e00e8cd29c2f7fd8148aabf98`.
+
 ### 9.1 Sasaran
 
 Membuktikan aplikasi Fase 0–8 tahan terhadap beban, race, penyalahgunaan umum, kegagalan restore, variasi browser/perangkat, dan penggunaan toko nyata sebelum domain billing dibuka.
@@ -737,4 +739,4 @@ Evidence tidak boleh memuat `.env`, secret, access token, OTP nyata, webhook sig
 
 ## 16. Langkah Berikutnya
 
-Fase 8 telah selesai untuk implementasi dan CI. Langkah berikutnya adalah menyusun serta mengesahkan Document Delta dan implementation plan Fase 9 — Hardening & Pilot sebelum implementasinya dimulai. Deployment/backfill Fase 7 dan deployment Fase 8 tetap wajib pada gate release v1.
+Fase 8 telah di-merge ke `main` pada baseline resmi Fase 9 `98e1d8775265ab7e00e8cd29c2f7fd8148aabf98`. Langkah berikutnya adalah menyusun serta mengesahkan Document Delta dan implementation plan Fase 9 — Hardening & Pilot sebelum implementasinya dimulai. Deployment/backfill Fase 7 dan deployment Fase 8 tetap wajib pada gate release v1.
