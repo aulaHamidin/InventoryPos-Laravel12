@@ -6,6 +6,7 @@ use App\Actions\Audit\RecordAuditAction;
 use App\Enums\PosPaymentStatus;
 use App\Enums\PosTransactionStatus;
 use App\Enums\UserRole;
+use App\Events\ItemAnalyticsRecalculationRequested;
 use App\Exceptions\ApiProblemException;
 use App\Models\Item;
 use App\Models\PosPayment;
@@ -14,6 +15,7 @@ use App\Models\PosTransactionItem;
 use App\Models\StockMovement;
 use App\Models\User;
 use App\Notifications\PosRefundRequired;
+use App\Services\TenantContext;
 use App\Support\AuditContext;
 use App\Support\Decimal;
 use App\Support\OwnershipGuard;
@@ -131,6 +133,11 @@ class ReturnPosTransactionAction
                     'refund_due_amount' => $due,
                 ],
                 context: $context,
+            );
+            ItemAnalyticsRecalculationRequested::dispatch(
+                TenantContext::id(),
+                array_map('intval', $itemIds),
+                'customer_return',
             );
 
             return [

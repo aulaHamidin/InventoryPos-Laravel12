@@ -403,7 +403,7 @@ new_avg = ((old_stock × old_avg) + (in_qty × in_cost)) / (old_stock + in_qty)
 
 - [x] CD-7.1 ditutup oleh `document-delta-f7-analytics-smart-threshold.md`.
 - [x] Source of truth dan enforcement contract disinkronkan.
-- [ ] Susun dan setujui `implementation-plan-fase-7.md` sebelum coding.
+- [x] `implementation-plan-fase-7.md` disusun dan disetujui sebelum coding.
 
 ### Deliverables
 
@@ -578,7 +578,7 @@ Fase 5 tidak boleh dimulai sebelum acceptance dan testing contract Fase 0-4 lulu
 
 - Fase 5: stock opname.
 - Fase 6: manual QRIS/transfer, expiry, void, return, refund, history/reporting.
-- Fase 7: CD-7.1 analytics dan Smart Threshold telah ditutup; implementation plan dan coding belum dimulai.
+- Fase 7: CD-7.1 serta implementation plan telah disahkan; implementasi Analytics dan Smart Threshold sedang menjalani acceptance gate.
 - Fase 8: aktivasi Staff dan multi-kasir.
 - Fase 10+: billing, platform admin, impersonation, deletion.
 

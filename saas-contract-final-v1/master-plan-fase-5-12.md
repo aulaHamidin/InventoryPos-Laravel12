@@ -334,11 +334,15 @@ threshold = ceil(avg_daily_out × (effective_lead_time_days + safety_stock_days)
 ### 7.6 Exit checklist
 
 - [x] CD-7.1 disetujui dan sinkron ke seluruh source of truth terkait.
-- [ ] Pure calculation unit tests lulus tanpa DB.
-- [ ] API/dashboard/role tests lulus.
-- [ ] Visual evidence lengkap.
-- [ ] Full quality gate dan CI remote hijau.
+- [x] Pure calculation unit tests lulus tanpa DB.
+- [x] API/dashboard/role tests lulus.
+- [x] Redis runtime, migration fresh/upgrade/rollback, dan local backfill status lulus.
+- [x] Visual evidence lengkap.
+- [x] Full quality gate lokal lulus.
+- [ ] Commit/push serta CI remote `test` dan `analytics-runtime` hijau.
 - [ ] Fase 7 ditandai selesai.
+
+Deployment/backfill analytics pada environment target ditunda ke release v1. Gate tersebut wajib diselesaikan sebelum release v1 dinyatakan siap, tetapi bukan blocker untuk memulai Fase 8 setelah CI remote Fase 7 hijau.
 
 ---
 
@@ -731,4 +735,4 @@ Evidence tidak boleh memuat `.env`, secret, access token, OTP nyata, webhook sig
 
 ## 16. Langkah Berikutnya
 
-Fase 6 telah selesai dan ditutup. CD-7.1 juga telah ditutup melalui Document Delta Fase 7. Langkah berikutnya adalah menyusun dan menyetujui `implementation-plan-fase-7.md` sebelum implementasi Fase 7 dimulai.
+Implementasi lokal Fase 7 dan evidence telah lulus. Langkah berikutnya adalah commit/push increment dan memastikan job CI `test` serta `analytics-runtime` hijau. Setelah itu Fase 7 dapat ditutup dan Fase 8 dimulai; deployment/backfill Fase 7 tetap wajib pada gate release v1.

@@ -26,7 +26,6 @@ class AppServiceProvider extends ServiceProvider
         Auth::provider('tenant_eloquent', fn ($app, array $config) => new TenantUserProvider($app['hash'], $config['model']));
         Sanctum::usePersonalAccessTokenModel(PersonalAccessToken::class);
         Livewire::addPersistentMiddleware([SetTenantContext::class]);
-
         Event::listen(Login::class, function (Login $event): void {
             if (! $event->user instanceof User || $event->user->tenant === null) {
                 return;

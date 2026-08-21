@@ -3,9 +3,11 @@
 namespace App\Actions\Inventory;
 
 use App\Actions\Audit\RecordAuditAction;
+use App\Events\ItemAnalyticsRecalculationRequested;
 use App\Models\Item;
 use App\Models\ItemSupplier;
 use App\Models\User;
+use App\Services\TenantContext;
 use App\Support\AuditContext;
 use App\Support\OwnershipGuard;
 use Illuminate\Support\Facades\DB;
@@ -26,8 +28,16 @@ class DeleteItemSupplierAction
             Item::whereKey($itemId)->lockForUpdate()->firstOrFail();
             $link = ItemSupplier::whereKey($itemSupplierId)->lockForUpdate()->firstOrFail();
             $old = $link->toArray();
+            $wasPreferred = (bool) $link->is_preferred;
             $this->audit->execute('item_supplier.deleted', $actor, $link, oldValues: $old, context: $context);
             $link->delete();
+            if ($wasPreferred) {
+                ItemAnalyticsRecalculationRequested::dispatch(
+                    TenantContext::id(),
+                    [$itemId],
+                    'preferred_supplier_deleted',
+                );
+            }
         });
     }
 }

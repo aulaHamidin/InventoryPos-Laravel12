@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\MovementClass;
 use App\Models\Concerns\HasTenantScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -18,7 +19,7 @@ class Item extends Model
         'category_id', 'rack_id', 'kode', 'barcode', 'nama', 'satuan',
         'harga_beli', 'average_cost', 'harga_jual', 'stok_saat_ini', 'stok_minimal',
         'threshold_mode', 'lead_time_days', 'safety_stock_days', 'exp_date',
-        'movement_class', 'is_active',
+        'is_active',
     ];
 
     protected function casts(): array
@@ -27,7 +28,8 @@ class Item extends Model
             'harga_beli' => 'decimal:2', 'average_cost' => 'decimal:2', 'harga_jual' => 'decimal:2',
             'stok_saat_ini' => 'integer', 'stok_minimal' => 'integer',
             'lead_time_days' => 'integer', 'safety_stock_days' => 'integer',
-            'exp_date' => 'date', 'is_active' => 'boolean',
+            'exp_date' => 'date', 'movement_class' => MovementClass::class,
+            'analytics_calculated_at' => 'immutable_datetime', 'is_active' => 'boolean',
         ];
     }
 

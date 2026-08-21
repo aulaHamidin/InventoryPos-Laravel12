@@ -11,6 +11,7 @@ use App\Enums\PosPaymentMethod;
 use App\Enums\PosPaymentStatus;
 use App\Enums\PosTransactionStatus;
 use App\Enums\UserRole;
+use App\Events\ItemAnalyticsRecalculationRequested;
 use App\Exceptions\ApiProblemException;
 use App\Models\AuditLog;
 use App\Models\PosPayment;
@@ -21,6 +22,7 @@ use App\Notifications\PosRefundRequired;
 use App\Services\TenantContext;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
@@ -142,6 +144,7 @@ it('uses an inclusive 24 hour cutoff for payment and scheduler expiry without si
 
 it('voids every payment method with full obligation and immutable sale void movements', function (string $method) {
     Notification::fake();
+    Event::fake([ItemAnalyticsRecalculationRequested::class]);
     [, $owner] = makeTenantUser();
     $item = makeInventoryItem(['stok_saat_ini' => 5, 'harga_jual' => '100.00']);
     $transaction = manualCheckout($owner, $item, 2);
@@ -159,10 +162,12 @@ it('voids every payment method with full obligation and immutable sale void move
         ->and($result['refund_due_amount'])->toBe('200.00')
         ->and($item->fresh()->stok_saat_ini)->toBe(5)
         ->and(StockMovement::where('movement_type', 'sale_void')->count())->toBe(1);
+    Event::assertDispatched(ItemAnalyticsRecalculationRequested::class, fn ($event): bool => $event->reason === 'sale_void' && $event->itemIds === [$item->id]);
 })->with(['cash', 'qris', 'transfer']);
 
 it('calculates exact cumulative partial return refunds and can reopen due after a settled obligation', function () {
     Notification::fake();
+    Event::fake([ItemAnalyticsRecalculationRequested::class]);
     [, $owner] = makeTenantUser();
     $item = makeInventoryItem(['stok_saat_ini' => 10, 'harga_jual' => '100.00']);
     $transaction = manualCheckout($owner, $item, 3, '0.01');
@@ -228,6 +233,7 @@ it('calculates exact cumulative partial return refunds and can reopen due after 
         $final['payment']->id, '299.99', 'Repeat full refund no-op', $owner,
     );
     expect($refundedNoOp['no_op'])->toBeTrue();
+    Event::assertDispatched(ItemAnalyticsRecalculationRequested::class, fn ($event): bool => $event->reason === 'customer_return' && $event->itemIds === [$item->id]);
 });
 
 it('serializes manual payment and refund amounts through the API without trusting a client amount', function () {

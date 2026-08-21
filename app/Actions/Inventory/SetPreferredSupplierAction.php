@@ -3,9 +3,11 @@
 namespace App\Actions\Inventory;
 
 use App\Actions\Audit\RecordAuditAction;
+use App\Events\ItemAnalyticsRecalculationRequested;
 use App\Models\Item;
 use App\Models\ItemSupplier;
 use App\Models\User;
+use App\Services\TenantContext;
 use App\Support\AuditContext;
 use App\Support\OwnershipGuard;
 use Illuminate\Support\Facades\DB;
@@ -25,12 +27,30 @@ class SetPreferredSupplierAction
         return DB::transaction(function () use ($itemSupplierId, $itemId, $actor, $context): ItemSupplier {
             Item::whereKey($itemId)->lockForUpdate()->firstOrFail();
             $link = ItemSupplier::whereKey($itemSupplierId)->lockForUpdate()->firstOrFail();
+            $currentPreferredId = ItemSupplier::where('item_id', $link->item_id)
+                ->where('is_preferred', true)
+                ->value('id');
+            if ((int) $currentPreferredId === (int) $link->getKey()) {
+                return $link->fresh(['item', 'supplier']);
+            }
 
             ItemSupplier::where('item_id', $link->item_id)->update(['is_preferred' => false]);
             $link->is_preferred = true;
             $link->save();
 
-            $this->audit->execute('item.preferred_supplier_changed', $actor, $link, newValues: ['is_preferred' => true], context: $context);
+            $this->audit->execute(
+                'item.preferred_supplier_changed',
+                $actor,
+                $link,
+                oldValues: ['preferred_item_supplier_id' => $currentPreferredId],
+                newValues: ['preferred_item_supplier_id' => $link->getKey()],
+                context: $context,
+            );
+            ItemAnalyticsRecalculationRequested::dispatch(
+                TenantContext::id(),
+                [$itemId],
+                'preferred_supplier_set',
+            );
 
             return $link->fresh(['item', 'supplier']);
         });

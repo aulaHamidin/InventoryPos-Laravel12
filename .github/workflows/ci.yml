@@ -40,6 +40,8 @@ jobs:
       QUEUE_CONNECTION: sync
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
@@ -56,7 +58,70 @@ jobs:
       - run: npm test
       - run: npm run build
       - run: php artisan migrate:fresh --seed --force
+      - name: Verify F7 migration upgrade and rollback
+        env:
+          DB_ADMIN_USERNAME: root
+          DB_ADMIN_PASSWORD: password
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y default-mysql-client
+          bash tests/Support/f7-migration-harness.sh
       - run: php artisan test
       - run: php artisan view:cache
       - run: php artisan route:list
+      - run: php artisan schedule:list
       - run: vendor/bin/pint --test
+
+  analytics-runtime:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: password
+          MYSQL_DATABASE: testing_analytics
+          MYSQL_USER: sail
+          MYSQL_PASSWORD: password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -ppassword"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+      redis:
+        image: redis:alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      APP_ENV: testing
+      APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: testing_analytics
+      DB_USERNAME: sail
+      DB_PASSWORD: password
+      CACHE_STORE: redis
+      CACHE_PREFIX: f7-${{ github.run_id }}-${{ github.run_attempt }}-
+      QUEUE_CONNECTION: redis
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: 6379
+      SESSION_DRIVER: array
+      ANALYTICS_RUNTIME_TESTS: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: bcmath, dom, fileinfo, intl, mbstring, mysql, redis, zip
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist
+      - run: php artisan migrate:fresh --force
+      - run: php artisan test tests/Integration/AnalyticsRedisRuntimeTest.php
+      - run: php artisan schedule:list

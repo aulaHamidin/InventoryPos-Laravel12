@@ -3,10 +3,12 @@
 namespace App\Actions\Inventory;
 
 use App\Actions\Audit\RecordAuditAction;
+use App\Events\ItemAnalyticsRecalculationRequested;
 use App\Models\Item;
 use App\Models\ItemSupplier;
 use App\Models\Supplier;
 use App\Models\User;
+use App\Services\TenantContext;
 use App\Support\AuditContext;
 use App\Support\Decimal;
 use App\Support\OwnershipGuard;
@@ -18,6 +20,7 @@ class UpsertItemSupplierAction
     public function __construct(
         private readonly RecordAuditAction $audit,
         private readonly SetPreferredSupplierAction $setPreferred,
+        private readonly UnsetPreferredSupplierAction $unsetPreferred,
     ) {}
 
     public function execute(int $itemId, int $supplierId, array $data, User $actor, ?AuditContext $context = null): ItemSupplier
@@ -35,28 +38,53 @@ class UpsertItemSupplierAction
             }
         }
 
-        $link = DB::transaction(function () use ($itemId, $supplierId, $data, $price, $actor, $context): ItemSupplier {
+        [$link, $preferredLeadTimeChanged] = DB::transaction(function () use ($itemId, $supplierId, $data, $price, $actor, $context): array {
             Item::whereKey($itemId)->lockForUpdate()->firstOrFail();
 
-            $link = ItemSupplier::updateOrCreate(
-                ['item_id' => $itemId, 'supplier_id' => $supplierId],
-                [
-                    'supplier_sku' => $data['supplier_sku'] ?? null,
-                    'harga_beli_terakhir' => $price,
-                    'lead_time_days' => $data['lead_time_days'] ?? null,
-                ],
-            );
-            if (array_key_exists('is_preferred', $data) && ! $data['is_preferred']) {
-                $link->update(['is_preferred' => false]);
-            }
+            $link = ItemSupplier::where('item_id', $itemId)
+                ->where('supplier_id', $supplierId)
+                ->lockForUpdate()
+                ->first();
+            $wasPreferred = (bool) ($link?->is_preferred ?? false);
+            $oldLeadTime = $link?->lead_time_days;
+            $link ??= new ItemSupplier(['item_id' => $itemId, 'supplier_id' => $supplierId]);
+            $link->fill([
+                'supplier_sku' => $data['supplier_sku'] ?? null,
+                'harga_beli_terakhir' => $price,
+                'lead_time_days' => $data['lead_time_days'] ?? null,
+            ])->save();
 
             $this->audit->execute('item_supplier.upserted', $actor, $link, newValues: $link->toArray(), context: $context);
 
-            return $link;
+            return [
+                $link,
+                $wasPreferred && (string) $oldLeadTime !== (string) $link->lead_time_days,
+            ];
         });
 
-        return ! empty($data['is_preferred'])
-            ? $this->setPreferred->execute($link->getKey(), $actor, $context)
-            : $link->fresh(['item', 'supplier']);
+        if (! empty($data['is_preferred'])) {
+            $preferred = $this->setPreferred->execute($link->getKey(), $actor, $context);
+            if ($preferredLeadTimeChanged) {
+                ItemAnalyticsRecalculationRequested::dispatch(
+                    TenantContext::id(),
+                    [$itemId],
+                    'preferred_supplier_lead_time_changed',
+                );
+            }
+
+            return $preferred;
+        }
+        if (array_key_exists('is_preferred', $data) && ! $data['is_preferred'] && $link->is_preferred) {
+            return $this->unsetPreferred->execute($link->getKey(), $actor, $context);
+        }
+        if ($preferredLeadTimeChanged) {
+            ItemAnalyticsRecalculationRequested::dispatch(
+                TenantContext::id(),
+                [$itemId],
+                'preferred_supplier_lead_time_changed',
+            );
+        }
+
+        return $link->fresh(['item', 'supplier']);
     }
 }

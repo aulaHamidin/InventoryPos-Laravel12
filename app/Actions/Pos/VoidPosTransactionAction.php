@@ -6,6 +6,7 @@ use App\Actions\Audit\RecordAuditAction;
 use App\Enums\PosPaymentStatus;
 use App\Enums\PosTransactionStatus;
 use App\Enums\UserRole;
+use App\Events\ItemAnalyticsRecalculationRequested;
 use App\Exceptions\ApiProblemException;
 use App\Models\Item;
 use App\Models\PosPayment;
@@ -13,6 +14,7 @@ use App\Models\PosTransaction;
 use App\Models\StockMovement;
 use App\Models\User;
 use App\Notifications\PosRefundRequired;
+use App\Services\TenantContext;
 use App\Support\AuditContext;
 use App\Support\OwnershipGuard;
 use App\Support\PosRefundCalculator;
@@ -84,6 +86,11 @@ class VoidPosTransactionAction
                 oldValues: ['status' => PosTransactionStatus::Completed->value],
                 newValues: ['status' => PosTransactionStatus::Voided->value, 'reason' => $reason],
                 context: $context,
+            );
+            ItemAnalyticsRecalculationRequested::dispatch(
+                TenantContext::id(),
+                array_map('intval', $itemIds),
+                'sale_void',
             );
 
             /** @var PosPayment|null $payment */

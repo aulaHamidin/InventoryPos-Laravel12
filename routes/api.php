@@ -18,6 +18,7 @@ Route::prefix('v1')->group(function (): void {
 
         Route::get('/items', [InventoryController::class, 'index']);
         Route::get('/items/scan/{barcode}', [InventoryController::class, 'scan']);
+        Route::post('/items/{id}/smart-threshold', [InventoryController::class, 'applySmartThreshold']);
         Route::post('/items/{item}/suppliers', [ItemSupplierController::class, 'store']);
         Route::get('/items/{item}/suppliers', [ItemSupplierController::class, 'index']);
         Route::post('/item-suppliers/{link}/preferred', [ItemSupplierController::class, 'preferred']);

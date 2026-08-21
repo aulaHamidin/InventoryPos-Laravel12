@@ -10,6 +10,8 @@ class LowStockWidget extends BaseWidget
 {
     protected static ?int $sort = 1;
 
+    protected int|string|array $columnSpan = 'full';
+
     protected function getStats(): array
     {
         $lowStockCount = Item::where('is_active', true)

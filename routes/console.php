@@ -11,3 +11,9 @@ Artisan::command('inspire', function () {
 Schedule::command('pos:expire-pending')
     ->everyMinute()
     ->withoutOverlapping();
+
+Schedule::command('analytics:recalculate')
+    ->dailyAt('00:15')
+    ->timezone('Asia/Jakarta')
+    ->withoutOverlapping(180)
+    ->onOneServer();

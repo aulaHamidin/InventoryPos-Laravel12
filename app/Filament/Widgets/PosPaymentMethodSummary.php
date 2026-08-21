@@ -9,6 +9,8 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 
 class PosPaymentMethodSummary extends StatsOverviewWidget
 {
+    protected static ?int $sort = 5;
+
     protected static bool $isLazy = true;
 
     protected function getStats(): array

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Actions\Analytics\ApplySmartThresholdAction;
 use App\Actions\Inventory\AdjustStockAction;
 use App\Actions\Inventory\StockInAction;
 use App\Actions\Inventory\StockOutAction;
@@ -13,6 +14,7 @@ use App\Support\AuditContext;
 use App\Support\OwnershipGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class InventoryController extends Controller
 {
@@ -39,6 +41,44 @@ class InventoryController extends Controller
         $this->authorize('viewAny', Item::class);
 
         return $this->success(Item::where('barcode', $barcode)->where('is_active', true)->firstOrFail());
+    }
+
+    public function applySmartThreshold(
+        Request $request,
+        int $id,
+        ApplySmartThresholdAction $action,
+    ): JsonResponse {
+        $item = OwnershipGuard::validate(Item::class, $id);
+        $this->authorize('update', $item);
+
+        $unexpected = array_values(array_diff(
+            array_keys($request->all()),
+            ['threshold_mode', 'lead_time_days', 'safety_stock_days'],
+        ));
+        if ($unexpected !== []) {
+            throw ValidationException::withMessages([
+                'request' => ['Field tidak diizinkan: '.implode(', ', $unexpected).'.'],
+            ]);
+        }
+
+        $data = $request->validate([
+            'threshold_mode' => ['required', 'in:auto_velocity'],
+            'lead_time_days' => ['required', 'integer', 'min:0'],
+            'safety_stock_days' => ['required', 'integer', 'min:0'],
+        ]);
+
+        $result = $action->execute(
+            $id,
+            (int) $data['lead_time_days'],
+            (int) $data['safety_stock_days'],
+            $request->user(),
+            AuditContext::fromRequest($request),
+        );
+
+        return $this->success(
+            $result->toApiArray($id, 'auto_velocity'),
+            'Smart Threshold berhasil diterapkan.',
+        );
     }
 
     public function stockIn(Request $request, StockInAction $action): JsonResponse

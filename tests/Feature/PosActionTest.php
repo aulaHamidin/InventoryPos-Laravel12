@@ -3,11 +3,13 @@
 use App\Actions\Pos\CheckoutPosAction;
 use App\Actions\Pos\PayCashAction;
 use App\Enums\PosTransactionStatus;
+use App\Events\ItemAnalyticsRecalculationRequested;
 use App\Exceptions\ApiProblemException;
 use App\Models\PosPayment;
 use App\Models\PosTransaction;
 use App\Models\StockMovement;
 use App\Services\TenantContext;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -61,6 +63,7 @@ it('is idempotent for the same payload and rejects a different payload for the s
 });
 
 it('pays total amount, returns change, deducts once, and blocks a second payment', function () {
+    Event::fake([ItemAnalyticsRecalculationRequested::class]);
     [, $owner] = makeTenantUser();
     $item = makeInventoryItem(['stok_saat_ini' => 10, 'harga_jual' => '100.00']);
     $transaction = app(CheckoutPosAction::class)->execute([
@@ -74,6 +77,7 @@ it('pays total amount, returns change, deducts once, and blocks a second payment
         ->and($result['transaction']->status)->toBe(PosTransactionStatus::Completed)
         ->and($item->fresh()->stok_saat_ini)->toBe(8)
         ->and(StockMovement::where('movement_type', 'sale')->count())->toBe(1);
+    Event::assertDispatched(ItemAnalyticsRecalculationRequested::class, fn ($event): bool => $event->reason === 'sale' && $event->itemIds === [$item->id]);
 
     expect(fn () => app(PayCashAction::class)->execute($transaction->id, '250.00', $owner))
         ->toThrow(ApiProblemException::class);

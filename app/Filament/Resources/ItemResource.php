@@ -2,13 +2,17 @@
 
 namespace App\Filament\Resources;
 
+use App\Actions\Analytics\ApplySmartThresholdAction;
+use App\Actions\Analytics\PreviewItemAnalyticsAction;
 use App\Actions\Inventory\AdjustStockAction;
 use App\Actions\Inventory\StockInAction;
 use App\Actions\Inventory\UpsertItemSupplierAction;
 use App\Actions\Reports\QueueReportExportAction;
+use App\Enums\MovementClass;
 use App\Filament\Resources\ItemResource\Pages;
 use App\Models\Item;
 use App\Models\Supplier;
+use App\Support\AnalyticsClock;
 use App\Support\AuditContext;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -43,7 +47,10 @@ class ItemResource extends Resource
             Forms\Components\TextInput::make('harga_beli')->required()->numeric()->minValue(0)->default(0),
             Forms\Components\TextInput::make('harga_jual')->required()->numeric()->minValue(0)->default(0),
             Forms\Components\TextInput::make('stok_minimal')->required()->numeric()->minValue(0)->default(0),
-            Forms\Components\Select::make('threshold_mode')->options(['manual' => 'Manual', 'auto_velocity' => 'Otomatis'])->default('manual'),
+            Forms\Components\Select::make('threshold_mode')
+                ->options(['manual' => 'Manual', 'auto_velocity' => 'Otomatis'])
+                ->helperText('Mode otomatis hanya dapat diaktifkan melalui Smart Threshold.')
+                ->default('manual'),
             Forms\Components\TextInput::make('lead_time_days')->numeric()->minValue(0)->default(0),
             Forms\Components\TextInput::make('safety_stock_days')->numeric()->minValue(0)->default(0),
             Forms\Components\DatePicker::make('exp_date'),
@@ -63,6 +70,29 @@ class ItemResource extends Resource
                     ->color(fn (Item $record): string => $record->stok_saat_ini <= $record->stok_minimal ? 'danger' : 'success')
                     ->formatStateUsing(fn ($state, Item $record): string => "{$state} {$record->satuan}"),
                 Tables\Columns\TextColumn::make('harga_jual')->money('IDR')->sortable(),
+                Tables\Columns\TextColumn::make('movement_class')
+                    ->label('Kelas')
+                    ->badge()
+                    ->formatStateUsing(fn (MovementClass|string|null $state): string => $state instanceof MovementClass
+                        ? $state->label()
+                        : (MovementClass::tryFrom((string) $state)?->label() ?? 'Belum Terklasifikasi'))
+                    ->color(fn (MovementClass|string|null $state): string => match ($state instanceof MovementClass ? $state : MovementClass::tryFrom((string) $state)) {
+                        MovementClass::Fast => 'success',
+                        MovementClass::Normal => 'info',
+                        MovementClass::Slow => 'warning',
+                        MovementClass::Dead => 'danger',
+                        default => 'gray',
+                    }),
+                Tables\Columns\TextColumn::make('threshold_mode')
+                    ->label('Mode Threshold')->badge()
+                    ->formatStateUsing(fn (string $state): string => $state === 'auto_velocity' ? 'Otomatis' : 'Manual')
+                    ->color(fn (string $state): string => $state === 'auto_velocity' ? 'primary' : 'gray'),
+                Tables\Columns\TextColumn::make('analytics_calculated_at')
+                    ->label('Dihitung')
+                    ->dateTime('d M Y H:i')
+                    ->timezone(AnalyticsClock::BUSINESS_TIMEZONE)
+                    ->placeholder('Belum eligible')
+                    ->toggleable(),
                 Tables\Columns\IconColumn::make('is_active')->boolean()->label('Aktif'),
             ])
             ->filters([
@@ -139,6 +169,74 @@ class ItemResource extends Resource
                             auth()->user(), AuditContext::fromRequest(request()),
                         );
                         Notification::make()->title('Supplier item tersimpan')->success()->send();
+                    }),
+                Tables\Actions\Action::make('preview_smart_threshold')
+                    ->label('Hitung Preview')
+                    ->icon('heroicon-o-calculator')
+                    ->color('gray')
+                    ->modalSubmitActionLabel('Hitung Preview')
+                    ->fillForm(fn (Item $record): array => [
+                        'lead_time_days' => (int) $record->lead_time_days,
+                        'safety_stock_days' => (int) $record->safety_stock_days,
+                    ])
+                    ->form([
+                        Forms\Components\TextInput::make('lead_time_days')->label('Lead time (hari)')->integer()->minValue(0)->required(),
+                        Forms\Components\TextInput::make('safety_stock_days')->label('Safety stock (hari)')->integer()->minValue(0)->required(),
+                        Forms\Components\Placeholder::make('preview_notice')
+                            ->content('Preview hanya dihitung setelah tombol Hitung Preview ditekan. Mengubah input memerlukan preview baru.'),
+                    ])
+                    ->action(function (Item $record, array $data): void {
+                        $result = app(PreviewItemAnalyticsAction::class)->execute(
+                            (int) $record->getKey(),
+                            (int) $data['lead_time_days'],
+                            (int) $data['safety_stock_days'],
+                        );
+                        if (! $result->eligible) {
+                            Notification::make()->title('Histori belum cukup')
+                                ->body('Eligible pada '.AnalyticsClock::business($result->eligibleAt)->format('d M Y H:i').' WIB.')
+                                ->warning()->persistent()->send();
+
+                            return;
+                        }
+                        Notification::make()->title('Preview Smart Threshold Sekali Pakai')
+                            ->body(sprintf(
+                                'Net demand %d unit · rata-rata %s/hari · lead time %d hari (%s) · rekomendasi %d · kelas %s.',
+                                $result->netDemandQty,
+                                $result->averageDailyOut,
+                                $result->effectiveLeadTimeDays,
+                                $result->leadTimeSource,
+                                $result->recommendedThreshold,
+                                $result->movementClass->label(),
+                            ))
+                            ->success()->send();
+                    }),
+                Tables\Actions\Action::make('apply_smart_threshold')
+                    ->label('Terapkan Smart Threshold')
+                    ->icon('heroicon-o-bolt')
+                    ->color('primary')
+                    ->requiresConfirmation()
+                    ->modalSubmitActionLabel('Terapkan')
+                    ->fillForm(fn (Item $record): array => [
+                        'lead_time_days' => (int) $record->lead_time_days,
+                        'safety_stock_days' => (int) $record->safety_stock_days,
+                    ])
+                    ->form([
+                        Forms\Components\TextInput::make('lead_time_days')->label('Lead time (hari)')->integer()->minValue(0)->required(),
+                        Forms\Components\TextInput::make('safety_stock_days')->label('Safety stock (hari)')->integer()->minValue(0)->required(),
+                        Forms\Components\Placeholder::make('authoritative_notice')
+                            ->content('Apply selalu menghitung ulang ledger dan konfigurasi terkini di dalam transaction.'),
+                    ])
+                    ->action(function (Item $record, array $data): void {
+                        $result = app(ApplySmartThresholdAction::class)->execute(
+                            (int) $record->getKey(),
+                            (int) $data['lead_time_days'],
+                            (int) $data['safety_stock_days'],
+                            auth()->user(),
+                            AuditContext::fromRequest(request()),
+                        );
+                        Notification::make()->title('Smart Threshold diterapkan')
+                            ->body("Threshold {$result->recommendedThreshold} · {$result->movementClass->label()}.")
+                            ->success()->send();
                     }),
                 Tables\Actions\EditAction::make(),
             ])

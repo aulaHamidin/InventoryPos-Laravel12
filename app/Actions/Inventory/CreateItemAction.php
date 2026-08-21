@@ -3,6 +3,7 @@
 namespace App\Actions\Inventory;
 
 use App\Actions\Audit\RecordAuditAction;
+use App\Enums\MovementClass;
 use App\Models\Category;
 use App\Models\Item;
 use App\Models\Rack;
@@ -24,7 +25,13 @@ class CreateItemAction
         $category = OwnershipGuard::validate(Category::class, (int) ($data['category_id'] ?? 0));
         $rack = isset($data['rack_id']) ? OwnershipGuard::validate(Rack::class, (int) $data['rack_id']) : null;
 
-        foreach (['harga_beli', 'harga_jual', 'stok_minimal'] as $field) {
+        if (isset($data['threshold_mode']) && $data['threshold_mode'] !== 'manual') {
+            throw ValidationException::withMessages([
+                'threshold_mode' => ['Item baru harus menggunakan threshold manual.'],
+            ]);
+        }
+
+        foreach (['harga_beli', 'harga_jual', 'stok_minimal', 'lead_time_days', 'safety_stock_days'] as $field) {
             if (isset($data[$field]) && $data[$field] < 0) {
                 throw ValidationException::withMessages([$field => ['Nilai tidak boleh negatif.']]);
             }
@@ -64,13 +71,14 @@ class CreateItemAction
                 'harga_jual' => $data['harga_jual'] ?? 0,
                 'stok_saat_ini' => 0,
                 'stok_minimal' => $data['stok_minimal'] ?? 0,
-                'threshold_mode' => $data['threshold_mode'] ?? 'manual',
+                'threshold_mode' => 'manual',
                 'lead_time_days' => $data['lead_time_days'] ?? 0,
                 'safety_stock_days' => $data['safety_stock_days'] ?? 0,
                 'exp_date' => $data['exp_date'] ?? null,
-                'movement_class' => $data['movement_class'] ?? 'normal',
                 'is_active' => $data['is_active'] ?? true,
             ]);
+            $item->movement_class = MovementClass::Unclassified;
+            $item->save();
 
             $this->audit->execute('item.created', $actor, $item, newValues: $item->toArray(), context: $context);
 
