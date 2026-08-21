@@ -354,6 +354,8 @@ Mengaktifkan login Staff/Kasir pada `/app/login`, menyediakan workflow pengelola
 
 ### 8.2 Deliverable
 
+CD-8.1 disahkan pada baseline `ad07521`: Owner-provisioned password, `is_active/auth_version`, own-cashier transaction scope, diskon existing, inventory read-only, idempotency unique per tenant, serta projection Staff bebas purchase cost.
+
 **Identity dan management**
 
 - Aktifkan role Staff yang sudah ada; tidak membuat identity platform baru.

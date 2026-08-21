@@ -451,6 +451,10 @@ Frontend harus mengikuti permission backend.
 
 Backend tetap wajib menolak unauthorized access.
 
+Fase 8 mengunci menu Staff menjadi Dashboard operasional, POS, Barang read-only, Supplier read-only, dan transaksi milik sendiri. Dashboard Staff hanya memuat Low Stock, Analytics Class Insight, dan Analytics Operational Summary. Shopping Recommendation, aggregate payment summary, report/export, stock movement/opname, Shopping List, analytics settings/apply, billing, dan staff management tidak ditampilkan serta tetap ditolak backend.
+
+Owner membuat Staff dengan password awal dan dapat mengatur ulang akses melalui confirmation dialog. Password tidak ditampilkan ulang, tidak masuk notifikasi, dan tidak boleh muncul pada evidence.
+
 ---
 
 # 12. Owner Dashboard

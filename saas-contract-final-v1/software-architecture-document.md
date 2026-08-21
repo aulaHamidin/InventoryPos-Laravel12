@@ -635,6 +635,10 @@ Full tenant capabilities.
 
 POS + allowed stock operations. Mulai Fase 8, insight analytics hanya read-only dan tidak boleh membawa cost, margin, valuation, profit, atau billing.
 
+Fase 8 mengunci allowed stock operations menjadi read-only item/stok/low-stock/supplier. Staff hanya melihat dan membayar transaksi dengan `cashier_id` sendiri; diskon POS existing tetap diizinkan. Ability `pay` terpisah dari `void`, `return`, dan `refund`.
+
+Session web menyimpan `users.auth_version` saat login dan memeriksanya pada setiap request. Deactivate/reset menaikkan version serta menghapus seluruh token; mekanisme ini tidak bergantung pada session driver. Provider dan middleware menolak User nonaktif sebelum tenant context dipakai.
+
 ### Super Admin
 
 Platform administration.

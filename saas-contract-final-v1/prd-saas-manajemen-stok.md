@@ -105,6 +105,8 @@ Kasir boleh:
 - input stok dasar sesuai permission;
 - menerima barang jika workflow tersebut diberikan.
 
+Pada Fase 8, permission yang diberikan adalah POS lengkap dengan diskon existing, item/stok/low-stock/supplier read-only, analytics operasional non-finansial, dan histori transaksi kasir sendiri. Stock mutation, opname, receiving, Shopping List, report/export, void/return/refund, billing, dan staff management tetap Owner-only.
+
 ### 4.3 Super Admin
 
 Super Admin adalah pengguna internal SaaS. Ia mengelola tenant, subscription, support, dan keamanan platform.
