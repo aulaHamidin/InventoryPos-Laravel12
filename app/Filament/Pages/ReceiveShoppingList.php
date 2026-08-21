@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Actions\Shopping\ReceiveShoppingListAction;
 use App\Enums\ShoppingListStatus;
+use App\Enums\UserRole;
 use App\Filament\Resources\ShoppingListResource;
 use App\Models\ShoppingList;
 use App\Support\AuditContext;
@@ -30,6 +31,12 @@ class ReceiveShoppingList extends Page implements HasForms
     public ShoppingList $shoppingList;
 
     public ?array $data = [];
+
+    public static function canAccess(): bool
+    {
+        return auth()->user()?->role === UserRole::Owner
+            && auth()->user()?->is_active === true;
+    }
 
     public function mount(): void
     {

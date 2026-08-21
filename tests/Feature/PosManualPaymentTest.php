@@ -17,7 +17,6 @@ use App\Models\AuditLog;
 use App\Models\PosPayment;
 use App\Models\PosTransaction;
 use App\Models\StockMovement;
-use App\Models\User;
 use App\Notifications\PosRefundRequired;
 use App\Services\TenantContext;
 use Carbon\Carbon;
@@ -299,12 +298,12 @@ it('normalizes blank metadata and rejects invalid manual requests at the API bou
         ->assertJsonPath('data.note', null);
 });
 
-it('hides cross tenant POS and payment IDs as 404 and denies Staff financial actions', function () {
+it('hides cross tenant and other cashier POS and payment IDs as 404', function () {
     [$tenantA, $ownerA] = makeTenantUser();
-    $staffA = User::create([
+    $staffA = makeTenantScopedUser([
         'name' => 'POS Staff', 'email' => 'pos-staff-a@example.test', 'no_hp' => '081111111110',
-        'password' => 'password', 'role' => UserRole::Staff,
-    ]);
+        'password' => 'password',
+    ], UserRole::Staff);
     $itemA = makeInventoryItem();
     $transactionA = manualCheckout($ownerA, $itemA);
     $resultA = app(ConfirmManualPaymentAction::class)->execute(
@@ -323,8 +322,8 @@ it('hides cross tenant POS and payment IDs as 404 and denies Staff financial act
     $pending = manualCheckout($ownerA, $itemA);
     $this->withHeader('Idempotency-Key', (string) Str::uuid())
         ->postJson("/api/v1/pos/transactions/{$pending->id}/pay-manual", ['method' => 'qris'])
-        ->assertForbidden();
-    $this->getJson("/api/v1/pos/transactions/{$transactionA->id}/status")->assertForbidden();
+        ->assertNotFound();
+    $this->getJson("/api/v1/pos/transactions/{$transactionA->id}/status")->assertNotFound();
 });
 
 it('escapes stored manual notes on the Owner transaction detail', function () {

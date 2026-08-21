@@ -26,7 +26,8 @@ class ViewPosTransaction extends ViewRecord
                 ->label('Void Transaksi')
                 ->color('danger')
                 ->icon('heroicon-o-x-circle')
-                ->visible(fn (): bool => $this->record->status === PosTransactionStatus::Completed
+                ->visible(fn (): bool => PosTransactionResource::ownerCanManage()
+                    && $this->record->status === PosTransactionStatus::Completed
                     && $this->record->items->every(fn ($line): bool => $line->returned_qty === 0))
                 ->requiresConfirmation()
                 ->form([
@@ -42,7 +43,7 @@ class ViewPosTransaction extends ViewRecord
             Actions\Action::make('return')
                 ->label('Retur Item')
                 ->icon('heroicon-o-arrow-uturn-left')
-                ->visible(fn (): bool => in_array($this->record->status, [
+                ->visible(fn (): bool => PosTransactionResource::ownerCanManage() && in_array($this->record->status, [
                     PosTransactionStatus::Completed, PosTransactionStatus::PartiallyReturned,
                 ], true))
                 ->form([
@@ -68,6 +69,9 @@ class ViewPosTransaction extends ViewRecord
                 ->label('Catat Refund')
                 ->icon('heroicon-o-banknotes')
                 ->visible(function (): bool {
+                    if (! PosTransactionResource::ownerCanManage()) {
+                        return false;
+                    }
                     $payment = $this->record->payment;
                     if ($payment === null || ! in_array($payment->status, [
                         PosPaymentStatus::RefundRequired, PosPaymentStatus::PartiallyRefunded,
@@ -98,7 +102,8 @@ class ViewPosTransaction extends ViewRecord
                 ->label('Cetak / Simpan PDF')
                 ->icon('heroicon-o-printer')
                 ->extraAttributes(['class' => 'fi-no-print'])
-                ->alpineClickHandler('window.print()'),
+                ->alpineClickHandler('window.print()')
+                ->visible(fn (): bool => PosTransactionResource::ownerCanManage()),
         ];
     }
 }

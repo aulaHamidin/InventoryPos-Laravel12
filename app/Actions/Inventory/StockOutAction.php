@@ -8,6 +8,7 @@ use App\Models\StockMovement;
 use App\Models\User;
 use App\Services\TenantContext;
 use App\Support\AuditContext;
+use App\Support\OwnerActorGuard;
 use App\Support\OwnershipGuard;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -35,7 +36,7 @@ class StockOutAction
             throw ValidationException::withMessages(['movement_type' => ['Tipe pergerakan tidak valid.']]);
         }
 
-        OwnershipGuard::validate(User::class, $actor->getKey());
+        OwnerActorGuard::assert($actor);
         OwnershipGuard::validate(Item::class, $itemId);
 
         return DB::transaction(function () use ($itemId, $qty, $actor, $movementType, $referenceType, $referenceId, $note, $context): StockMovement {

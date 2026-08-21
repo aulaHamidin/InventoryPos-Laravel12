@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets;
 
 use App\Enums\PosPaymentMethod;
+use App\Enums\UserRole;
 use App\Models\PosPayment;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
@@ -12,6 +13,12 @@ class PosPaymentMethodSummary extends StatsOverviewWidget
     protected static ?int $sort = 5;
 
     protected static bool $isLazy = true;
+
+    public static function canView(): bool
+    {
+        return auth()->user()?->role === UserRole::Owner
+            && auth()->user()?->is_active === true;
+    }
 
     protected function getStats(): array
     {

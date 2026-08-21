@@ -4,14 +4,13 @@ namespace App\Actions\Analytics;
 
 use App\Actions\Audit\RecordAuditAction;
 use App\Data\AnalyticsCalculationResult;
-use App\Enums\UserRole;
 use App\Exceptions\ApiProblemException;
 use App\Models\Item;
 use App\Models\User;
 use App\Support\AnalyticsClock;
 use App\Support\AuditContext;
+use App\Support\OwnerActorGuard;
 use App\Support\OwnershipGuard;
-use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -30,11 +29,8 @@ class ApplySmartThresholdAction
         User $actor,
         ?AuditContext $context = null,
     ): AnalyticsCalculationResult {
-        OwnershipGuard::validate(User::class, $actor->getKey());
+        OwnerActorGuard::assert($actor);
         OwnershipGuard::validate(Item::class, $itemId);
-        if ($actor->role !== UserRole::Owner) {
-            throw new AuthorizationException;
-        }
         if ($leadTimeDays < 0 || $safetyStockDays < 0) {
             throw ValidationException::withMessages([
                 'lead_time_days' => ['Lead time dan safety stock tidak boleh negatif.'],

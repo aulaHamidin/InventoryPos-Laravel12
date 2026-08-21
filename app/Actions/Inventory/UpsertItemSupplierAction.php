@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Services\TenantContext;
 use App\Support\AuditContext;
 use App\Support\Decimal;
+use App\Support\OwnerActorGuard;
 use App\Support\OwnershipGuard;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -25,7 +26,7 @@ class UpsertItemSupplierAction
 
     public function execute(int $itemId, int $supplierId, array $data, User $actor, ?AuditContext $context = null): ItemSupplier
     {
-        OwnershipGuard::validate(User::class, $actor->getKey());
+        OwnerActorGuard::assert($actor);
         OwnershipGuard::validate(Item::class, $itemId);
         OwnershipGuard::validate(Supplier::class, $supplierId);
 

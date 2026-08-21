@@ -3,14 +3,12 @@
 namespace App\Actions\Analytics;
 
 use App\Actions\Audit\RecordAuditAction;
-use App\Enums\UserRole;
 use App\Events\TenantAnalyticsRecalculationRequested;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\TenantContext;
 use App\Support\AuditContext;
-use App\Support\OwnershipGuard;
-use Illuminate\Auth\Access\AuthorizationException;
+use App\Support\OwnerActorGuard;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -20,10 +18,7 @@ class UpdateTenantAnalyticsSettingsAction
 
     public function execute(int $deadStockDays, User $actor, ?AuditContext $context = null): Tenant
     {
-        OwnershipGuard::validate(User::class, $actor->getKey());
-        if ($actor->role !== UserRole::Owner) {
-            throw new AuthorizationException;
-        }
+        OwnerActorGuard::assert($actor);
         if ($deadStockDays < 0) {
             throw ValidationException::withMessages([
                 'dead_stock_days' => ['Dead stock days tidak boleh negatif.'],

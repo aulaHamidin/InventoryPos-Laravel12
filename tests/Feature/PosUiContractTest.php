@@ -6,15 +6,14 @@ use App\Models\User;
 use App\Services\TenantContext;
 use Livewire\Livewire;
 
-it('renders the Owner POS scanner and keyboard contract while denying Staff', function () {
+it('renders the scanner and payment contract for active Owner and Staff', function () {
     [, $owner] = makeTenantUser();
-    $staff = User::create([
+    $staff = makeTenantScopedUser([
         'name' => 'POS Staff',
         'email' => 'pos-staff@example.test',
         'no_hp' => '083333333333',
         'password' => 'password',
-        'role' => UserRole::Staff,
-    ]);
+    ], UserRole::Staff);
 
     $this->actingAs($owner)
         ->get('/app/pos')
@@ -62,5 +61,9 @@ it('renders the Owner POS scanner and keyboard contract while denying Staff', fu
         ])
         ->assertSee('Cetak Struk');
 
-    $this->actingAs($staff)->get('/app/pos')->assertForbidden();
+    $this->actingAs($staff)
+        ->get('/app/pos')
+        ->assertOk()
+        ->assertSee('Pilih Pembayaran')
+        ->assertSee('Diskon');
 });

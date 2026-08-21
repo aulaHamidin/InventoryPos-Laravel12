@@ -78,10 +78,11 @@ class PosScreen extends Component
 
         $search = $this->searchQuery;
         $this->searchResults = Item::where('is_active', true)
+            ->select(['id', 'kode', 'barcode', 'nama', 'satuan', 'harga_jual', 'stok_saat_ini'])
             ->where(fn ($query) => $query->where('nama', 'like', "%{$search}%")
                 ->orWhere('kode', 'like', "%{$search}%")
                 ->orWhere('barcode', 'like', "%{$search}%"))
-            ->limit(10)->get()->toArray();
+            ->limit(10)->get()->map(fn (Item $item): array => $this->posItem($item))->all();
     }
 
     public function handleBarcode(string $barcode): void
@@ -92,6 +93,7 @@ class PosScreen extends Component
         }
 
         $item = Item::where('is_active', true)
+            ->select(['id', 'kode', 'barcode', 'nama', 'satuan', 'harga_jual', 'stok_saat_ini'])
             ->where(fn ($query) => $query->where('barcode', $barcode)
                 ->orWhere('kode', $barcode)
                 ->orWhere('nama', 'like', "%{$barcode}%"))
@@ -384,6 +386,19 @@ class PosScreen extends Component
     {
         $this->feedback = $message;
         $this->feedbackType = $type;
+    }
+
+    private function posItem(Item $item): array
+    {
+        return [
+            'id' => $item->id,
+            'kode' => $item->kode,
+            'barcode' => $item->barcode,
+            'nama' => $item->nama,
+            'satuan' => $item->satuan,
+            'harga_jual' => $item->harga_jual,
+            'stok_saat_ini' => $item->stok_saat_ini,
+        ];
     }
 
     public function render()

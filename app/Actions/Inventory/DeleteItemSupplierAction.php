@@ -9,6 +9,7 @@ use App\Models\ItemSupplier;
 use App\Models\User;
 use App\Services\TenantContext;
 use App\Support\AuditContext;
+use App\Support\OwnerActorGuard;
 use App\Support\OwnershipGuard;
 use Illuminate\Support\Facades\DB;
 
@@ -18,7 +19,7 @@ class DeleteItemSupplierAction
 
     public function execute(int $itemSupplierId, User $actor, ?AuditContext $context = null): void
     {
-        OwnershipGuard::validate(User::class, $actor->getKey());
+        OwnerActorGuard::assert($actor);
         $guarded = OwnershipGuard::validate(ItemSupplier::class, $itemSupplierId);
         OwnershipGuard::validate(Item::class, $guarded->item_id);
 

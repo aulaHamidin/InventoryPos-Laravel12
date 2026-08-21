@@ -11,6 +11,7 @@ use App\Models\StockOpname;
 use App\Models\Supplier;
 use App\Models\User;
 use App\Support\AuditContext;
+use App\Support\OwnerActorGuard;
 use App\Support\OwnershipGuard;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -27,7 +28,7 @@ class DeleteMasterDataAction
         if (! in_array($modelClass, self::ALLOWED, true)) {
             throw new InvalidArgumentException('Unsupported master model.');
         }
-        OwnershipGuard::validate(User::class, $actor->getKey());
+        OwnerActorGuard::assert($actor);
         OwnershipGuard::validate($modelClass, $id);
 
         DB::transaction(function () use ($modelClass, $id, $actor, $context): void {

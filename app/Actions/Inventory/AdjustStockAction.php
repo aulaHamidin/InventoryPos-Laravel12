@@ -8,6 +8,7 @@ use App\Models\StockMovement;
 use App\Models\User;
 use App\Services\TenantContext;
 use App\Support\AuditContext;
+use App\Support\OwnerActorGuard;
 use App\Support\OwnershipGuard;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -31,7 +32,7 @@ class AdjustStockAction
             throw ValidationException::withMessages(['note' => ['Catatan penyesuaian wajib diisi.']]);
         }
 
-        OwnershipGuard::validate(User::class, $actor->getKey());
+        OwnerActorGuard::assert($actor);
         OwnershipGuard::validate(Item::class, $itemId);
 
         return DB::transaction(function () use ($itemId, $qty, $direction, $note, $actor, $context): StockMovement {

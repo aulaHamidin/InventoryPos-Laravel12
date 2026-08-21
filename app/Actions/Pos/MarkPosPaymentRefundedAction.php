@@ -4,16 +4,15 @@ namespace App\Actions\Pos;
 
 use App\Actions\Audit\RecordAuditAction;
 use App\Enums\PosPaymentStatus;
-use App\Enums\UserRole;
 use App\Exceptions\ApiProblemException;
 use App\Models\PosPayment;
 use App\Models\PosTransaction;
 use App\Models\User;
 use App\Support\AuditContext;
 use App\Support\Decimal;
+use App\Support\OwnerActorGuard;
 use App\Support\OwnershipGuard;
 use App\Support\PosRefundCalculator;
-use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -123,9 +122,6 @@ class MarkPosPaymentRefundedAction
 
     private function assertOwner(User $actor): void
     {
-        OwnershipGuard::validate(User::class, $actor->getKey());
-        if ($actor->role !== UserRole::Owner) {
-            throw new AuthorizationException;
-        }
+        OwnerActorGuard::assert($actor);
     }
 }

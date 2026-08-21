@@ -14,6 +14,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Services\TenantContext;
 use App\Support\AuditContext;
+use App\Support\OwnerActorGuard;
 use App\Support\OwnershipGuard;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -39,7 +40,7 @@ class CreateOpnameAction
             throw ValidationException::withMessages(['rack_id' => ['Rak tidak boleh dikirim untuk opname full.']]);
         }
 
-        OwnershipGuard::validate(User::class, $actor->getKey());
+        OwnerActorGuard::assert($actor);
         if ($rackId !== null) {
             OwnershipGuard::validate(Rack::class, $rackId);
         }

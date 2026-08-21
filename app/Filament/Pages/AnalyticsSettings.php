@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Actions\Analytics\UpdateTenantAnalyticsSettingsAction;
+use App\Enums\UserRole;
 use App\Services\TenantContext;
 use App\Support\AuditContext;
 use Filament\Forms\Components\TextInput;
@@ -29,6 +30,12 @@ class AnalyticsSettings extends Page implements HasForms
     protected static string $view = 'filament.pages.analytics-settings';
 
     public ?array $data = [];
+
+    public static function canAccess(): bool
+    {
+        return auth()->user()?->role === UserRole::Owner
+            && auth()->user()?->is_active === true;
+    }
 
     public function mount(): void
     {

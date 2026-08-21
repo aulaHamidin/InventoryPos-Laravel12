@@ -9,6 +9,7 @@ use App\Actions\Inventory\StockInAction;
 use App\Actions\Inventory\UpsertItemSupplierAction;
 use App\Actions\Reports\QueueReportExportAction;
 use App\Enums\MovementClass;
+use App\Enums\UserRole;
 use App\Filament\Resources\ItemResource\Pages;
 use App\Models\Item;
 use App\Models\Supplier;
@@ -86,7 +87,8 @@ class ItemResource extends Resource
                 Tables\Columns\TextColumn::make('threshold_mode')
                     ->label('Mode Threshold')->badge()
                     ->formatStateUsing(fn (string $state): string => $state === 'auto_velocity' ? 'Otomatis' : 'Manual')
-                    ->color(fn (string $state): string => $state === 'auto_velocity' ? 'primary' : 'gray'),
+                    ->color(fn (string $state): string => $state === 'auto_velocity' ? 'primary' : 'gray')
+                    ->visible(fn (): bool => static::ownerCanMutate()),
                 Tables\Columns\TextColumn::make('analytics_calculated_at')
                     ->label('Dihitung')
                     ->dateTime('d M Y H:i')
@@ -108,6 +110,7 @@ class ItemResource extends Resource
                         Forms\Components\Select::make('format')->options(['pdf' => 'PDF', 'xlsx' => 'Excel'])->required(),
                         Forms\Components\Toggle::make('low_stock')->label('Hanya stok rendah'),
                     ])
+                    ->visible(fn (): bool => static::ownerCanMutate())
                     ->action(function (array $data): void {
                         app(QueueReportExportAction::class)->execute(
                             'stock', $data['format'], ['low_stock' => $data['low_stock'] ?? false],
@@ -119,11 +122,13 @@ class ItemResource extends Resource
                     ->label('Cetak')
                     ->icon('heroicon-o-printer')
                     ->extraAttributes(['class' => 'fi-no-print'])
-                    ->alpineClickHandler('window.print()'),
+                    ->alpineClickHandler('window.print()')
+                    ->visible(fn (): bool => static::ownerCanMutate()),
             ])
             ->actions([
                 Tables\Actions\Action::make('stock_in')
                     ->label('Stok Masuk')->icon('heroicon-o-arrow-down-tray')->color('success')
+                    ->visible(fn (): bool => static::ownerCanMutate())
                     ->form([
                         Forms\Components\Placeholder::make('stok_sebelum')->content(fn (Item $record): string => (string) $record->stok_saat_ini),
                         Forms\Components\TextInput::make('qty')->numeric()->minValue(1)->required(),
@@ -141,6 +146,7 @@ class ItemResource extends Resource
                     }),
                 Tables\Actions\Action::make('adjust_stock')
                     ->label('Sesuaikan')->icon('heroicon-o-adjustments-horizontal')->color('warning')
+                    ->visible(fn (): bool => static::ownerCanMutate())
                     ->form([
                         Forms\Components\Placeholder::make('stok_sebelum')->label('Stok sebelum')->content(fn (Item $record): string => (string) $record->stok_saat_ini),
                         Forms\Components\Select::make('direction')->options(['in' => 'Tambah', 'out' => 'Kurangi'])->required(),
@@ -156,6 +162,7 @@ class ItemResource extends Resource
                     }),
                 Tables\Actions\Action::make('supplier')
                     ->label('Supplier')->icon('heroicon-o-truck')
+                    ->visible(fn (): bool => static::ownerCanMutate())
                     ->form([
                         Forms\Components\Select::make('supplier_id')->options(fn () => Supplier::orderBy('nama')->pluck('nama', 'id'))->required()->searchable(),
                         Forms\Components\TextInput::make('supplier_sku'),
@@ -174,6 +181,7 @@ class ItemResource extends Resource
                     ->label('Hitung Preview')
                     ->icon('heroicon-o-calculator')
                     ->color('gray')
+                    ->visible(fn (): bool => static::ownerCanMutate())
                     ->modalSubmitActionLabel('Hitung Preview')
                     ->fillForm(fn (Item $record): array => [
                         'lead_time_days' => (int) $record->lead_time_days,
@@ -214,6 +222,7 @@ class ItemResource extends Resource
                     ->label('Terapkan Smart Threshold')
                     ->icon('heroicon-o-bolt')
                     ->color('primary')
+                    ->visible(fn (): bool => static::ownerCanMutate())
                     ->requiresConfirmation()
                     ->modalSubmitActionLabel('Terapkan')
                     ->fillForm(fn (Item $record): array => [
@@ -238,7 +247,7 @@ class ItemResource extends Resource
                             ->body("Threshold {$result->recommendedThreshold} · {$result->movementClass->label()}.")
                             ->success()->send();
                     }),
-                Tables\Actions\EditAction::make(),
+                Tables\Actions\EditAction::make()->visible(fn (): bool => static::ownerCanMutate()),
             ])
             ->bulkActions([]);
     }
@@ -246,6 +255,12 @@ class ItemResource extends Resource
     public static function getRelations(): array
     {
         return [];
+    }
+
+    public static function ownerCanMutate(): bool
+    {
+        return auth()->user()?->role === UserRole::Owner
+            && auth()->user()?->is_active === true;
     }
 
     public static function getPages(): array

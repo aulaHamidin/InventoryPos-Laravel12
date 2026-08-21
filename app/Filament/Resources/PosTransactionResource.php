@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Actions\Reports\QueueReportExportAction;
 use App\Enums\PosPaymentMethod;
 use App\Enums\PosTransactionStatus;
+use App\Enums\UserRole;
 use App\Filament\Resources\PosTransactionResource\Pages;
 use App\Models\PosTransaction;
 use App\Support\AuditContext;
@@ -64,7 +65,8 @@ class PosTransactionResource extends Resource
                 Infolists\Components\TextEntry::make('payment.confirmedBy.name')->label('Dikonfirmasi Oleh')->placeholder('-'),
                 Infolists\Components\TextEntry::make('payment.manual_reference')->label('Referensi Manual')->placeholder('-'),
                 Infolists\Components\TextEntry::make('payment.confirmation_note')->label('Catatan Konfirmasi')->placeholder('-')->columnSpanFull(),
-                Infolists\Components\TextEntry::make('payment.refunded_amount')->label('Refund Tercatat')->money('IDR')->placeholder('Rp0'),
+                Infolists\Components\TextEntry::make('payment.refunded_amount')->label('Refund Tercatat')->money('IDR')->placeholder('Rp0')
+                    ->visible(fn (): bool => static::ownerCanManage()),
                 Infolists\Components\TextEntry::make('refund_obligation_amount')->label('Kewajiban Refund')
                     ->state(function (PosTransaction $record): string {
                         if ($record->payment === null) {
@@ -73,7 +75,7 @@ class PosTransactionResource extends Resource
                         $record->payment->setRelation('transaction', $record);
 
                         return PosRefundCalculator::obligation($record->payment);
-                    })->money('IDR'),
+                    })->money('IDR')->visible(fn (): bool => static::ownerCanManage()),
                 Infolists\Components\TextEntry::make('refund_due_amount')->label('Refund Due')
                     ->state(function (PosTransaction $record): string {
                         if ($record->payment === null) {
@@ -82,7 +84,7 @@ class PosTransactionResource extends Resource
                         $record->payment->setRelation('transaction', $record);
 
                         return PosRefundCalculator::due($record->payment);
-                    })->money('IDR'),
+                    })->money('IDR')->visible(fn (): bool => static::ownerCanManage()),
                 Infolists\Components\TextEntry::make('refund_resolution')->label('Penyelesaian Refund')
                     ->state(function (PosTransaction $record): string {
                         if ($record->payment === null) {
@@ -97,7 +99,7 @@ class PosTransactionResource extends Resource
                         return PosRefundCalculator::due($record->payment) === '0.00'
                             ? 'Refund selesai'
                             : 'Refund tertunda';
-                    })->badge(),
+                    })->badge()->visible(fn (): bool => static::ownerCanManage()),
             ])->columns(3),
             Infolists\Components\Section::make('Item dan Retur')->schema([
                 Infolists\Components\RepeatableEntry::make('items')->label('')->schema([
@@ -128,7 +130,7 @@ class PosTransactionResource extends Resource
                     Infolists\Components\TextEntry::make('actor_id')->label('Actor ID'),
                     Infolists\Components\TextEntry::make('new_values.note')->label('Catatan')->placeholder('-'),
                 ])->columns(4),
-            ])->collapsible(),
+            ])->collapsible()->visible(fn (): bool => static::ownerCanManage()),
         ]);
     }
 
@@ -195,6 +197,7 @@ class PosTransactionResource extends Resource
                                 fn (PosPaymentMethod $method) => [$method->value => $method->label()],
                             )->all()),
                     ])
+                    ->visible(fn (): bool => static::ownerCanManage())
                     ->action(function (array $data): void {
                         $format = $data['format'];
                         unset($data['format']);
@@ -205,7 +208,8 @@ class PosTransactionResource extends Resource
                     ->label('Cetak')
                     ->icon('heroicon-o-printer')
                     ->extraAttributes(['class' => 'fi-no-print'])
-                    ->alpineClickHandler('window.print()'),
+                    ->alpineClickHandler('window.print()')
+                    ->visible(fn (): bool => static::ownerCanManage()),
             ])
             ->actions([Tables\Actions\ViewAction::make()])
             ->bulkActions([]);
@@ -218,9 +222,21 @@ class PosTransactionResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->with([
-            'cashier', 'items.item', 'payment.confirmedBy', 'payment.auditLogs', 'stockMovements.item', 'auditLogs',
+        $query = parent::getEloquentQuery()->with([
+            'cashier', 'items.item', 'payment.confirmedBy',
         ]);
+
+        if (static::ownerCanManage()) {
+            return $query->with(['payment.auditLogs', 'stockMovements.item', 'auditLogs']);
+        }
+
+        return $query->where('cashier_id', auth()->id());
+    }
+
+    public static function ownerCanManage(): bool
+    {
+        return auth()->user()?->role === UserRole::Owner
+            && auth()->user()?->is_active === true;
     }
 
     public static function getPages(): array

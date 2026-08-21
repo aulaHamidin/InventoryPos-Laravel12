@@ -354,18 +354,18 @@ Mengaktifkan login Staff/Kasir pada `/app/login`, menyediakan workflow pengelola
 
 ### 8.2 Deliverable
 
-CD-8.1 disahkan pada baseline `ad07521`: Owner-provisioned password, `is_active/auth_version`, own-cashier transaction scope, diskon existing, inventory read-only, idempotency unique per tenant, serta projection Staff bebas purchase cost.
+CD-8.1 disahkan pada baseline `ad07521fbdf81ccf5a3fe9185fecac5eb96fa01e`: Owner-provisioned password, `is_active/auth_version`, own-cashier transaction scope, diskon existing, inventory read-only, idempotency unique per tenant, serta projection Staff bebas purchase cost.
 
 **Identity dan management**
 
 - Aktifkan role Staff yang sudah ada; tidak membuat identity platform baru.
-- Owner dapat membuat/mengundang, mengaktifkan/menonaktifkan, dan mereset akses Staff sesuai workflow yang dikunci.
+- Owner dapat membuat dengan password awal, mengaktifkan/menonaktifkan, dan mereset akses Staff; tidak ada invitation email.
 - Staff login melalui guard `web` di `/app/login`; `/admin/login` tetap khusus Admin platform.
 - Pesan kegagalan login tetap generik; akun valid tanpa permission menghasilkan HTTP 403 pada backend.
 
 **Authorization matrix**
 
-- Staff dapat memakai POS dan hanya stock operation yang diizinkan.
+- Staff dapat memakai POS, sedangkan inventory/stock hanya read-only; seluruh stock movement, opname, receiving, adjustment, dan Shopping List tetap Owner-only.
 - Supplier bersifat read-only bagi Staff sesuai Blueprint.
 - Staff tidak dapat melihat purchase cost, average cost, margin, inventory value, profit, financial report, billing, atau staff management.
 - Staff tidak dapat void, return, refund, delete master, atau mutation sensitif yang dilarang kontrak.

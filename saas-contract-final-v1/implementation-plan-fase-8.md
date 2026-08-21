@@ -70,7 +70,7 @@ Policy adalah security boundary. Navigasi, button, field, dan URL hanya mengikut
 | Smart Threshold apply/settings | Ya | Tidak | Ditolak |
 | Insight analytics operasional | Ya | Ya, read-only/non-finansial | Ditolak |
 | Report, export, print financial, private download | Ya sesuai Policy | Tidak | Ditolak |
-| Stock mutation dan receiving bernilai biaya | Ya | Owner-only kecuali Delta mengunci capability aman | Ditolak |
+| Stock mutation dan receiving bernilai biaya | Ya | Tidak; Owner-only | Ditolak |
 
 Implementasi policy tidak boleh melonggarkan `TenantOwnerPolicy` secara global. Buat policy/capability khusus Staff pada model yang memang diizinkan, lalu pertahankan policy Owner-only pada master mutation, report/export, audit, billing, void, return, dan refund.
 
@@ -91,7 +91,7 @@ Implementasi policy tidak boleh melonggarkan `TenantOwnerPolicy` secara global. 
 
 ### 5.3 Workflow Owner dan UI Staff
 
-1. Tambahkan Resource/Page **Staff** khusus Owner di panel `/app`: daftar, create/invite sesuai Delta, edit profil yang aman, reset akses, activate/deactivate dengan confirmation, status, serta feedback tanpa credential rahasia.
+1. Tambahkan Resource/Page **Staff** khusus Owner di panel `/app`: daftar, create dengan password awal, edit profil yang aman, reset akses, activate/deactivate dengan confirmation, status, serta feedback tanpa credential rahasia.
 2. Ubah `User::canAccessPanel()` dan panel `/app` agar Staff aktif dapat masuk. `/admin` tetap menggunakan guard `admin` dan tidak pernah menemukan User tenant.
 3. Pisahkan navigasi Owner/Staff melalui `shouldRegisterNavigation`, `canView`, `canAccess`, dan `visible`; Staff hanya memperoleh POS dan resource read-only/insight yang sudah disahkan.
 4. Audit seluruh form/table/infolist/widget dashboard. Sembunyikan field finansial, action destructive, staff management, reports/exports, analytics setting/apply, void/return/refund; pastikan direct URL dan Livewire request tetap ditolak.
@@ -132,8 +132,8 @@ Jalankan `composer validate --strict`, `composer check-platform-reqs`, `npm test
 
 Fase 8 hanya ditandai selesai setelah seluruh item berikut lulus:
 
-- [ ] Document Delta Fase 8 disahkan dan dokumen sumber tersinkron.
-- [ ] Lifecycle, create/invite, reset, activate/deactivate Staff Owner-only berfungsi dan teraudit.
+- [x] Document Delta Fase 8 disahkan dan dokumen sumber tersinkron.
+- [x] Lifecycle, create, reset, activate/deactivate Staff Owner-only berfungsi dan teraudit.
 - [ ] Login/guard, session/token revocation, tenant isolation, dan seluruh negative permission matrix lulus.
 - [ ] POS Staff cash, QRIS, dan transfer mencatat actor yang benar tanpa kebocoran finansial.
 - [ ] Concurrency multi-kasir dan idempotency tenant/kasir lulus tanpa stok negatif, payment/movement duplikat, atau transaksi tertukar.
@@ -148,6 +148,6 @@ Fase 8 hanya ditandai selesai setelah seluruh item berikut lulus:
 | Mengubah base policy membuat Staff mendapat mutation yang tidak dimaksud | Gunakan policy/capability spesifik per model, lalu uji allow dan deny matrix secara eksplisit. |
 | UI sudah tersembunyi tetapi data tetap muncul di JSON/export/Livewire | Bangun serializer yang role-aware dan test semua representasi, bukan hanya screenshot. |
 | Nonaktif hanya memblokir login, tetapi session/token lama tetap hidup | Middleware per request, revocation token, dan regression test session + Sanctum. |
-| Unique idempotency global mengonflikkan kasir berbeda | Migration + lookup composite sesuai Delta serta test paralel multi-kasir. |
+| Key idempotency tenant yang dipakai kasir berbeda membocorkan transaksi pertama | Pertahankan unique per tenant, kembalikan `409` generik tanpa ID/payload transaksi pertama, dan uji konflik lintas kasir. |
 | Membuka stock input lama membocorkan harga beli | Tetap Owner-only sampai capability, payload, dan serializer bebas biaya disahkan. |
 | Perubahan POS merusak invariant Fase 6–7 | Pertahankan transaction lock/order, action-level authorization, audit, dan seluruh regression/concurrency harness. |

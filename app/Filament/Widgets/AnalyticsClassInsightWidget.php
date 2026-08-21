@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets;
 
 use App\Enums\MovementClass;
+use App\Enums\UserRole;
 use App\Models\Item;
 use App\Support\AnalyticsClock;
 use Filament\Widgets\StatsOverviewWidget;
@@ -17,6 +18,12 @@ class AnalyticsClassInsightWidget extends StatsOverviewWidget
     protected static bool $isLazy = true;
 
     protected int|string|array $columnSpan = 'full';
+
+    public static function canView(): bool
+    {
+        return auth()->user()?->is_active === true
+            && in_array(auth()->user()?->role, [UserRole::Owner, UserRole::Staff], true);
+    }
 
     protected function getStats(): array
     {

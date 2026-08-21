@@ -10,6 +10,7 @@ use App\Models\StockOpname;
 use App\Models\StockOpnameDetail;
 use App\Models\User;
 use App\Support\AuditContext;
+use App\Support\OwnerActorGuard;
 use App\Support\OwnershipGuard;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -39,7 +40,7 @@ class SaveOpnameCountAction
             }
         }
 
-        OwnershipGuard::validate(User::class, $actor->getKey());
+        OwnerActorGuard::assert($actor);
         OwnershipGuard::validate(StockOpname::class, $opnameId);
         $itemIds->each(fn (int $itemId) => OwnershipGuard::validate(Item::class, $itemId));
 

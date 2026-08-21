@@ -18,10 +18,9 @@ use App\Models\User;
 use App\Notifications\PosRefundRequired;
 use App\Services\TenantContext;
 use App\Support\Decimal;
-use App\Support\OwnershipGuard;
+use App\Support\PosActorGuard;
 use App\Support\PosPendingExpiry;
 use App\Support\PosRefundCalculator;
-use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
@@ -33,11 +32,7 @@ class FinalizePosTransactionAction
 
     public function execute(FinalizePosPaymentCommand $command): array
     {
-        OwnershipGuard::validate(User::class, $command->actor->getKey());
-        OwnershipGuard::validate(PosTransaction::class, $command->transactionId);
-        if ($command->actor->role !== UserRole::Owner) {
-            throw new AuthorizationException;
-        }
+        PosActorGuard::transaction($command->actor, $command->transactionId);
 
         $result = DB::transaction(function () use ($command): array {
             $transaction = PosTransaction::whereKey($command->transactionId)->lockForUpdate()->firstOrFail();
@@ -281,6 +276,7 @@ class FinalizePosTransactionAction
     private function assertCanonicalPayment(PosPayment $payment, FinalizePosPaymentCommand $command): void
     {
         $identical = (int) $payment->pos_transaction_id === $command->transactionId
+            && (int) $payment->confirmed_by === (int) $command->actor->getKey()
             && $payment->method === $command->method
             && $this->normalize($payment->manual_reference) === $command->manualReference
             && $this->normalize($payment->confirmation_note) === $command->confirmationNote;

@@ -6,10 +6,12 @@ use App\Actions\Analytics\ApplySmartThresholdAction;
 use App\Actions\Inventory\AdjustStockAction;
 use App\Actions\Inventory\StockInAction;
 use App\Actions\Inventory\StockOutAction;
+use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Item;
 use App\Models\StockMovement;
+use App\Support\AnalyticsClock;
 use App\Support\AuditContext;
 use App\Support\OwnershipGuard;
 use Illuminate\Http\JsonResponse;
@@ -33,14 +35,21 @@ class InventoryController extends Controller
             $query->where('category_id', $request->integer('category_id'));
         }
 
-        return $this->success($query->paginate(min(100, max(1, $request->integer('per_page', 15)))));
+        $items = $query->paginate(min(100, max(1, $request->integer('per_page', 15))));
+        if ($request->user()->role === UserRole::Staff) {
+            $items->through(fn (Item $item): array => $this->staffItem($item));
+        }
+
+        return $this->success($items);
     }
 
     public function scan(Request $request, string $barcode): JsonResponse
     {
         $this->authorize('viewAny', Item::class);
 
-        return $this->success(Item::where('barcode', $barcode)->where('is_active', true)->firstOrFail());
+        $item = Item::with(['category', 'rack'])->where('barcode', $barcode)->where('is_active', true)->firstOrFail();
+
+        return $this->success($request->user()->role === UserRole::Staff ? $this->staffItem($item) : $item);
     }
 
     public function applySmartThreshold(
@@ -132,5 +141,26 @@ class InventoryController extends Controller
             'Penyesuaian stok berhasil dicatat.',
             201,
         );
+    }
+
+    private function staffItem(Item $item): array
+    {
+        return [
+            'id' => $item->id,
+            'kode' => $item->kode,
+            'barcode' => $item->barcode,
+            'nama' => $item->nama,
+            'satuan' => $item->satuan,
+            'harga_jual' => $item->harga_jual,
+            'stok_saat_ini' => $item->stok_saat_ini,
+            'stok_minimal' => $item->stok_minimal,
+            'movement_class' => $item->movement_class?->value,
+            'analytics_calculated_at' => $item->analytics_calculated_at
+                ? AnalyticsClock::business($item->analytics_calculated_at)->toIso8601String()
+                : null,
+            'is_active' => $item->is_active,
+            'category' => $item->category ? ['id' => $item->category->id, 'nama' => $item->category->nama] : null,
+            'rack' => $item->rack ? ['id' => $item->rack->id, 'nama' => $item->rack->nama] : null,
+        ];
     }
 }

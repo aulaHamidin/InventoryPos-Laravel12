@@ -11,7 +11,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Services\TenantContext;
 use App\Support\AuditContext;
-use App\Support\OwnershipGuard;
+use App\Support\OwnerActorGuard;
 use Illuminate\Support\Facades\DB;
 
 class GenerateShoppingListAction
@@ -20,7 +20,7 @@ class GenerateShoppingListAction
 
     public function execute(User $actor, ?AuditContext $context = null): ?ShoppingList
     {
-        OwnershipGuard::validate(User::class, $actor->getKey());
+        OwnerActorGuard::assert($actor);
 
         return DB::transaction(function () use ($actor, $context): ?ShoppingList {
             Tenant::whereKey(TenantContext::id())->lockForUpdate()->firstOrFail();

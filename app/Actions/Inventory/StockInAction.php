@@ -9,6 +9,7 @@ use App\Models\Supplier;
 use App\Models\User;
 use App\Support\AuditContext;
 use App\Support\Decimal;
+use App\Support\OwnerActorGuard;
 use App\Support\OwnershipGuard;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -38,7 +39,7 @@ class StockInAction
             throw ValidationException::withMessages(['harga_satuan' => ['Harga satuan tidak valid.']]);
         }
 
-        OwnershipGuard::validate(User::class, $actor->getKey());
+        OwnerActorGuard::assert($actor);
         OwnershipGuard::validate(Item::class, $itemId);
         if ($supplierId !== null) {
             OwnershipGuard::validate(Supplier::class, $supplierId);
