@@ -399,12 +399,12 @@ CD-8.1 disahkan pada baseline `ad07521fbdf81ccf5a3fe9185fecac5eb96fa01e`: Owner-
 
 ### 8.5 Exit checklist
 
-- [ ] Staff login dan management workflow lulus.
-- [ ] Seluruh negative permission matrix lulus.
-- [ ] Concurrent multi-cashier tests lulus.
-- [ ] Visual evidence Owner/Staff lengkap.
-- [ ] Full quality gate dan CI remote hijau.
-- [ ] Fase 8 ditandai selesai.
+- [x] Staff login dan management workflow lulus.
+- [x] Seluruh negative permission matrix lulus.
+- [x] Concurrent multi-cashier tests lulus.
+- [x] Visual evidence Owner/Staff lengkap.
+- [x] Full quality gate dan CI remote hijau.
+- [x] Fase 8 ditandai selesai.
 
 ---
 
@@ -719,7 +719,7 @@ Evidence tidak boleh memuat `.env`, secret, access token, OTP nyata, webhook sig
 - [x] Fase 5 — Cycle Counting.
 - [x] Fase 6 — POS Lengkap & Pembayaran Manual Non-Tunai.
 - [x] Fase 7 — Analytics & Smart Threshold.
-- [ ] Fase 8 — Staff & Multi-Kasir.
+- [x] Fase 8 — Staff & Multi-Kasir.
 - [ ] Fase 9 — Hardening & Pilot.
 - [ ] Fase 10 — Billing MRR & Admin Pusat.
 - [ ] Fase 11 — Self-Service Onboarding & Automated Billing.
@@ -737,4 +737,4 @@ Evidence tidak boleh memuat `.env`, secret, access token, OTP nyata, webhook sig
 
 ## 16. Langkah Berikutnya
 
-Fase 7 telah selesai untuk implementasi dan CI. Langkah berikutnya adalah menyusun serta mengesahkan implementation plan Fase 8 — Staff & Multi-Kasir, lalu memulai implementasinya. Deployment/backfill Fase 7 tetap wajib pada gate release v1.
+Fase 8 telah selesai untuk implementasi dan CI. Langkah berikutnya adalah menyusun serta mengesahkan Document Delta dan implementation plan Fase 9 — Hardening & Pilot sebelum implementasinya dimulai. Deployment/backfill Fase 7 dan deployment Fase 8 tetap wajib pada gate release v1.

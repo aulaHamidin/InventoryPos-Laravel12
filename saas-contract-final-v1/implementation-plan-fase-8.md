@@ -134,12 +134,12 @@ Fase 8 hanya ditandai selesai setelah seluruh item berikut lulus:
 
 - [x] Document Delta Fase 8 disahkan dan dokumen sumber tersinkron.
 - [x] Lifecycle, create, reset, activate/deactivate Staff Owner-only berfungsi dan teraudit.
-- [ ] Login/guard, session/token revocation, tenant isolation, dan seluruh negative permission matrix lulus.
-- [ ] POS Staff cash, QRIS, dan transfer mencatat actor yang benar tanpa kebocoran finansial.
-- [ ] Concurrency multi-kasir dan idempotency tenant/kasir lulus tanpa stok negatif, payment/movement duplikat, atau transaksi tertukar.
-- [ ] Walkthrough Owner/Staff desktop dan mobile serta evidence lengkap tersedia.
-- [ ] Full local quality gate dan CI remote hijau; regresi Fase 7 analytics runtime tetap hijau.
-- [ ] `docs/f8-acceptance.md` mencatat baseline, hasil test, evidence, SHA, CI run, serta catatan deployment yang memang ditunda.
+- [x] Login/guard, session/token revocation, tenant isolation, dan seluruh negative permission matrix lulus.
+- [x] POS Staff cash, QRIS, dan transfer mencatat actor yang benar tanpa kebocoran finansial.
+- [x] Concurrency multi-kasir dan idempotency tenant/kasir lulus tanpa stok negatif, payment/movement duplikat, atau transaksi tertukar.
+- [x] Walkthrough Owner/Staff desktop dan mobile serta evidence lengkap tersedia.
+- [x] Full local quality gate dan CI remote hijau; regresi Fase 7 analytics runtime tetap hijau.
+- [x] `docs/f8-acceptance.md` mencatat baseline, hasil test, evidence, SHA, CI run, serta catatan deployment yang memang ditunda.
 
 ## 8. Risiko utama dan mitigasi
 
