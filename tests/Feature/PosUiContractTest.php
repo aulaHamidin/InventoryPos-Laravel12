@@ -7,6 +7,9 @@ use App\Services\TenantContext;
 use Livewire\Livewire;
 
 it('renders the scanner and payment contract for active Owner and Staff', function () {
+    expect(file_get_contents(resource_path('views/livewire/pos-screen.blade.php')))
+        ->toContain('wire:blur="updateDiscount(');
+
     [, $owner] = makeTenantUser();
     $staff = makeTenantScopedUser([
         'name' => 'POS Staff',
@@ -18,6 +21,8 @@ it('renders the scanner and payment contract for active Owner and Staff', functi
     $this->actingAs($owner)
         ->get('/app/pos')
         ->assertOk()
+        ->assertSee('/app/stock-movements', false)
+        ->assertDontSee('/app/pos-transactions', false)
         ->assertSee('BarcodeDetector', false)
         ->assertSee("event.key === 'F1'", false)
         ->assertSee("event.key === 'F2'", false)
@@ -65,5 +70,7 @@ it('renders the scanner and payment contract for active Owner and Staff', functi
         ->get('/app/pos')
         ->assertOk()
         ->assertSee('Pilih Pembayaran')
-        ->assertSee('Diskon');
+        ->assertSee('Diskon')
+        ->assertSee('/app/pos-transactions', false)
+        ->assertDontSee('/app/stock-movements', false);
 });
