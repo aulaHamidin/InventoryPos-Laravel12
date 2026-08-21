@@ -13,6 +13,8 @@ class TenantUserProvider extends EloquentUserProvider
             ? $this->createModel()->newQueryWithoutScope(TenantScope::class)
             : $model->newQueryWithoutScope(TenantScope::class);
 
+        $query->where('is_active', true);
+
         with($query, $this->queryCallback);
 
         return $query;

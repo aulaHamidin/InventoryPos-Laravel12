@@ -354,16 +354,18 @@ Mengaktifkan login Staff/Kasir pada `/app/login`, menyediakan workflow pengelola
 
 ### 8.2 Deliverable
 
+CD-8.1 disahkan pada baseline `ad07521fbdf81ccf5a3fe9185fecac5eb96fa01e`: Owner-provisioned password, `is_active/auth_version`, own-cashier transaction scope, diskon existing, inventory read-only, idempotency unique per tenant, serta projection Staff bebas purchase cost.
+
 **Identity dan management**
 
 - Aktifkan role Staff yang sudah ada; tidak membuat identity platform baru.
-- Owner dapat membuat/mengundang, mengaktifkan/menonaktifkan, dan mereset akses Staff sesuai workflow yang dikunci.
+- Owner dapat membuat dengan password awal, mengaktifkan/menonaktifkan, dan mereset akses Staff; tidak ada invitation email.
 - Staff login melalui guard `web` di `/app/login`; `/admin/login` tetap khusus Admin platform.
 - Pesan kegagalan login tetap generik; akun valid tanpa permission menghasilkan HTTP 403 pada backend.
 
 **Authorization matrix**
 
-- Staff dapat memakai POS dan hanya stock operation yang diizinkan.
+- Staff dapat memakai POS, sedangkan inventory/stock hanya read-only; seluruh stock movement, opname, receiving, adjustment, dan Shopping List tetap Owner-only.
 - Supplier bersifat read-only bagi Staff sesuai Blueprint.
 - Staff tidak dapat melihat purchase cost, average cost, margin, inventory value, profit, financial report, billing, atau staff management.
 - Staff tidak dapat void, return, refund, delete master, atau mutation sensitif yang dilarang kontrak.
@@ -397,12 +399,12 @@ Mengaktifkan login Staff/Kasir pada `/app/login`, menyediakan workflow pengelola
 
 ### 8.5 Exit checklist
 
-- [ ] Staff login dan management workflow lulus.
-- [ ] Seluruh negative permission matrix lulus.
-- [ ] Concurrent multi-cashier tests lulus.
-- [ ] Visual evidence Owner/Staff lengkap.
-- [ ] Full quality gate dan CI remote hijau.
-- [ ] Fase 8 ditandai selesai.
+- [x] Staff login dan management workflow lulus.
+- [x] Seluruh negative permission matrix lulus.
+- [x] Concurrent multi-cashier tests lulus.
+- [x] Visual evidence Owner/Staff lengkap.
+- [x] Full quality gate dan CI remote hijau.
+- [x] Fase 8 ditandai selesai.
 
 ---
 
@@ -717,7 +719,7 @@ Evidence tidak boleh memuat `.env`, secret, access token, OTP nyata, webhook sig
 - [x] Fase 5 — Cycle Counting.
 - [x] Fase 6 — POS Lengkap & Pembayaran Manual Non-Tunai.
 - [x] Fase 7 — Analytics & Smart Threshold.
-- [ ] Fase 8 — Staff & Multi-Kasir.
+- [x] Fase 8 — Staff & Multi-Kasir.
 - [ ] Fase 9 — Hardening & Pilot.
 - [ ] Fase 10 — Billing MRR & Admin Pusat.
 - [ ] Fase 11 — Self-Service Onboarding & Automated Billing.
@@ -735,4 +737,4 @@ Evidence tidak boleh memuat `.env`, secret, access token, OTP nyata, webhook sig
 
 ## 16. Langkah Berikutnya
 
-Fase 7 telah selesai untuk implementasi dan CI. Langkah berikutnya adalah menyusun serta mengesahkan implementation plan Fase 8 — Staff & Multi-Kasir, lalu memulai implementasinya. Deployment/backfill Fase 7 tetap wajib pada gate release v1.
+Fase 8 telah selesai untuk implementasi dan CI. Langkah berikutnya adalah menyusun serta mengesahkan Document Delta dan implementation plan Fase 9 — Hardening & Pilot sebelum implementasinya dimulai. Deployment/backfill Fase 7 dan deployment Fase 8 tetap wajib pada gate release v1.

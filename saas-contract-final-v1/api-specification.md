@@ -106,6 +106,8 @@ Jika valid:
 
 ### `POST /auth/login`
 
+Owner dan Staff aktif dapat login. User nonaktif, tenant non-operable, email salah, dan password salah menggunakan pesan credential generik yang sama. Deactivate/reset mencabut seluruh token lama.
+
 ### `POST /auth/2fa/verify`
 
 ---
@@ -216,6 +218,10 @@ Rack delete hanya jika tidak melanggar active opname/data integrity.
 ---
 
 ## 5. POS
+
+Mulai Fase 8, Staff dapat checkout, membayar cash/manual, dan membaca status hanya untuk transaksi dengan `cashier_id` sendiri. ID transaksi tenant/kasir lain menghasilkan `404`; void/return/refund tetap Owner-only dan menghasilkan `403` pada record Staff sendiri.
+
+Idempotency tetap unique per tenant. Key yang sama dari actor lain menghasilkan `409 IDEMPOTENCY_CONFLICT` tanpa mengembalikan identitas transaksi/payment pertama.
 
 ### `POST /pos/checkout`
 

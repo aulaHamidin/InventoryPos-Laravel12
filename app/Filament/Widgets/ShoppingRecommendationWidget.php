@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets;
 
+use App\Enums\UserRole;
 use App\Filament\Resources\ShoppingListResource;
 use App\Models\Item;
 use Filament\Widgets\StatsOverviewWidget;
@@ -15,6 +16,12 @@ class ShoppingRecommendationWidget extends StatsOverviewWidget
     protected static bool $isLazy = true;
 
     protected int|string|array $columnSpan = 'full';
+
+    public static function canView(): bool
+    {
+        return auth()->user()?->role === UserRole::Owner
+            && auth()->user()?->is_active === true;
+    }
 
     protected function getStats(): array
     {

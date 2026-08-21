@@ -6,6 +6,7 @@ use App\Actions\Audit\RecordAuditAction;
 use App\Models\Item;
 use App\Models\User;
 use App\Support\AuditContext;
+use App\Support\OwnerActorGuard;
 use App\Support\OwnershipGuard;
 use Illuminate\Support\Facades\DB;
 
@@ -15,7 +16,7 @@ class DeactivateItemAction
 
     public function execute(int $itemId, User $actor, ?AuditContext $context = null): Item
     {
-        OwnershipGuard::validate(User::class, $actor->getKey());
+        OwnerActorGuard::assert($actor);
         OwnershipGuard::validate(Item::class, $itemId);
 
         return DB::transaction(function () use ($itemId, $actor, $context): Item {

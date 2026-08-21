@@ -5,7 +5,6 @@ use App\Models\AuditLog;
 use App\Models\Item;
 use App\Models\ItemSupplier;
 use App\Models\Supplier;
-use App\Models\User;
 use App\Services\TenantContext;
 use Laravel\Sanctum\Sanctum;
 
@@ -29,14 +28,14 @@ it('returns the standard 401 and validation error envelopes', function () {
         ->assertJsonStructure(['status', 'message', 'error_code', 'errors']);
 });
 
-it('allows Owner, denies Staff, and hides cross tenant IDs as 404', function () {
+it('allows Owner and Staff inventory projections and hides cross tenant IDs as 404', function () {
     [$tenantA, $ownerA] = makeTenantUser();
     $itemA = makeInventoryItem();
     TenantContext::run($tenantA, function () use (&$staff): void {
-        $staff = User::create([
+        $staff = makeTenantScopedUser([
             'name' => 'Staff', 'email' => 'staff@example.test', 'no_hp' => '081111111111',
-            'password' => 'password', 'role' => UserRole::Staff,
-        ]);
+            'password' => 'password',
+        ], UserRole::Staff);
     });
 
     Sanctum::actingAs($ownerA);
@@ -47,8 +46,11 @@ it('allows Owner, denies Staff, and hides cross tenant IDs as 404', function () 
 
     Sanctum::actingAs($staff);
     $this->getJson('/api/v1/items')
-        ->assertForbidden()
-        ->assertJsonPath('error_code', 'FORBIDDEN');
+        ->assertOk()
+        ->assertJsonPath('data.data.0.id', $itemA->id)
+        ->assertJsonMissingPath('data.data.0.harga_beli')
+        ->assertJsonMissingPath('data.data.0.average_cost')
+        ->assertJsonMissingPath('data.data.0.tenant_id');
 
     [, $ownerB] = makeTenantUser();
     $itemB = makeInventoryItem();
@@ -60,7 +62,7 @@ it('allows Owner, denies Staff, and hides cross tenant IDs as 404', function () 
         ->assertJsonPath('error_code', 'NOT_FOUND');
 
     expect($ownerB->canAccessPanel(filament()->getPanel('app')))->toBeTrue()
-        ->and($staff->canAccessPanel(filament()->getPanel('app')))->toBeFalse();
+        ->and($staff->canAccessPanel(filament()->getPanel('app')))->toBeTrue();
 });
 
 it('uses canonical stock and item supplier API contracts', function () {
@@ -134,10 +136,10 @@ it('exposes the canonical Shopping List lifecycle through API v1', function () {
 it('denies report files and financial export creation to Staff', function () {
     [$tenant] = makeTenantUser();
     TenantContext::run($tenant, function () use (&$staff): void {
-        $staff = User::create([
+        $staff = makeTenantScopedUser([
             'name' => 'Report Staff', 'email' => 'report-staff@example.test',
-            'no_hp' => '083333333333', 'password' => 'password', 'role' => UserRole::Staff,
-        ]);
+            'no_hp' => '083333333333', 'password' => 'password',
+        ], UserRole::Staff);
     });
     Sanctum::actingAs($staff);
 

@@ -10,6 +10,7 @@ use App\Models\Rack;
 use App\Models\User;
 use App\Services\TenantContext;
 use App\Support\AuditContext;
+use App\Support\OwnerActorGuard;
 use App\Support\OwnershipGuard;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -20,7 +21,7 @@ class UpdateItemAction
 
     public function execute(int $itemId, array $data, User $actor, ?AuditContext $context = null): Item
     {
-        OwnershipGuard::validate(User::class, $actor->getKey());
+        OwnerActorGuard::assert($actor);
         OwnershipGuard::validate(Item::class, $itemId);
         if (isset($data['category_id'])) {
             OwnershipGuard::validate(Category::class, (int) $data['category_id']);

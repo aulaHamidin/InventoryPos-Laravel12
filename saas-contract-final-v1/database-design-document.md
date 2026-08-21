@@ -82,6 +82,8 @@ erDiagram
 | no_hp | VARCHAR(20) | UNIQUE GLOBAL |
 | password | VARCHAR(255) | NOT NULL |
 | role | ENUM | `owner`, `staff` |
+| is_active | BOOLEAN | DEFAULT true |
+| auth_version | BIGINT UNSIGNED | DEFAULT 1; dinaikkan saat deactivate/reset akses |
 | two_factor_secret | TEXT | nullable |
 | two_factor_confirmed_at | TIMESTAMP | nullable |
 | created_at | TIMESTAMP | |
@@ -604,6 +606,10 @@ Minimum:
 Idempotency:
 
 `UNIQUE(tenant_id, idempotency_key)` pada resource yang memang menggunakannya.
+
+Fase 8 mempertahankan idempotency unique per tenant. Key yang sama dari actor lain menghasilkan conflict dan tidak mengembalikan resource actor pertama.
+
+User management memakai index `(tenant_id, role, is_active, id)`.
 
 ---
 

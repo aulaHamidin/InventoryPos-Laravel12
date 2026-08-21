@@ -240,6 +240,8 @@ Staff cannot access:
 
 Staff can operate POS.
 
+CD-8.1 mengunci: Owner-provisioned password, active/auth-version revocation, transaksi kasir sendiri, diskon existing, inventory read-only, idempotency tetap unique per tenant, serta projection bebas purchase cost. Redis-backed session revocation dan multi-process multi-kasir menjadi release blocker Fase 8.
+
 ---
 
 ## 11. Fase 9 — Hardening & Pilot

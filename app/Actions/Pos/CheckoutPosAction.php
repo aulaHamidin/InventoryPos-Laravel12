@@ -13,6 +13,7 @@ use App\Services\TenantContext;
 use App\Support\AuditContext;
 use App\Support\Decimal;
 use App\Support\OwnershipGuard;
+use App\Support\PosActorGuard;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -23,7 +24,7 @@ class CheckoutPosAction
 
     public function execute(array $items, string $idempotencyKey, User $actor, ?AuditContext $context = null): PosTransaction
     {
-        OwnershipGuard::validate(User::class, $actor->getKey());
+        PosActorGuard::assertOperator($actor);
 
         if ($items === [] || trim($idempotencyKey) === '') {
             throw ValidationException::withMessages([
@@ -63,7 +64,8 @@ class CheckoutPosAction
 
             $existing = PosTransaction::where('idempotency_key', $idempotencyKey)->first();
             if ($existing !== null) {
-                if (! hash_equals($existing->request_hash, $requestHash)) {
+                if ((int) $existing->cashier_id !== (int) $actor->getKey()
+                    || ! hash_equals($existing->request_hash, $requestHash)) {
                     throw new ApiProblemException(
                         'Idempotency key telah digunakan untuk payload berbeda.',
                         'IDEMPOTENCY_CONFLICT',

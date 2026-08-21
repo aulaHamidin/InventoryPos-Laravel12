@@ -18,8 +18,8 @@ class LoginAction
     {
         $user = User::withoutGlobalScope(TenantScope::class)->with('tenant')->where('email', $email)->first();
 
-        if ($user === null || ! Hash::check($password, $user->password) || $user->tenant === null || ! $user->tenant->canOperate()) {
-            throw ValidationException::withMessages(['email' => ['Kredensial tidak valid atau tenant tidak aktif.']]);
+        if ($user === null || ! $user->is_active || ! Hash::check($password, $user->password) || $user->tenant === null || ! $user->tenant->canOperate()) {
+            throw ValidationException::withMessages(['email' => ['Kredensial tidak valid.']]);
         }
 
         TenantContext::set($user->tenant);

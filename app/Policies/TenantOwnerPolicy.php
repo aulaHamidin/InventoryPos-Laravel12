@@ -11,6 +11,7 @@ abstract class TenantOwnerPolicy
     protected function owner(User $user): bool
     {
         return $user->role === UserRole::Owner
+            && $user->is_active
             && $user->tenant?->canOperate() === true;
     }
 

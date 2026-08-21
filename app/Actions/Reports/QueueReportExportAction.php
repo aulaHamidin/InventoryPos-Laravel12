@@ -9,6 +9,7 @@ use App\Models\Item;
 use App\Models\ReportExport;
 use App\Models\User;
 use App\Support\AuditContext;
+use App\Support\OwnerActorGuard;
 use App\Support\OwnershipGuard;
 use Illuminate\Validation\ValidationException;
 
@@ -18,7 +19,7 @@ class QueueReportExportAction
 
     public function execute(string $type, string $format, array $filters, User $actor, ?AuditContext $context = null): ReportExport
     {
-        OwnershipGuard::validate(User::class, $actor->getKey());
+        OwnerActorGuard::assert($actor);
 
         if (! in_array($type, ['stock', 'movement', 'pos'], true) || ! in_array($format, ['pdf', 'xlsx'], true)) {
             throw ValidationException::withMessages(['report_type' => ['Tipe atau format export tidak valid.']]);

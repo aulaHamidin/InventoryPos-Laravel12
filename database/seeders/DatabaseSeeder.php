@@ -19,19 +19,19 @@ class DatabaseSeeder extends Seeder
         ]);
 
         TenantContext::run($tenant, function (): void {
-            User::updateOrCreate(['email' => 'owner@demo.com'], [
+            $owner = User::updateOrCreate(['email' => 'owner@demo.com'], [
                 'name' => 'Owner Demo',
                 'no_hp' => '081234567891',
-                'password' => 'password',
-                'role' => UserRole::Owner,
+                'password' => 'DemoPassword12!',
             ]);
+            $owner->forceFill(['role' => UserRole::Owner])->save();
 
-            User::updateOrCreate(['email' => 'staff@demo.com'], [
+            $staff = User::updateOrCreate(['email' => 'staff@demo.com'], [
                 'name' => 'Staff Demo',
                 'no_hp' => '081234567892',
-                'password' => 'password',
-                'role' => UserRole::Staff,
+                'password' => 'DemoPassword12!',
             ]);
+            $staff->forceFill(['role' => UserRole::Staff])->save();
         });
     }
 }

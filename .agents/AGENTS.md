@@ -129,6 +129,15 @@ Payment:
 - Recalculation analytics tidak boleh mengubah stock, average cost, atau immutable movement ledger.
 - Fase 7 hanya Owner. Staff operational read-only analytics baru aktif setelah Fase 8 dan tidak boleh menerima financial fields.
 
+### Staff & Multi-Kasir
+
+- Staff lifecycle memakai `is_active` dan driver-independent `auth_version`; deactivate/reset mencabut token dan session lama.
+- Owner membuat Staff dengan password minimal 12 karakter; tidak ada invitation email Fase 8.
+- Staff hanya mengakses dashboard operasional, POS, item/stok/low-stock/supplier read-only, analytics non-finansial, dan transaksi `cashier_id` sendiri.
+- Staff boleh memakai diskon POS existing tetapi tidak boleh stock mutation/opname/receiving, Shopping List, report/export, void/return/refund, billing, analytics mutation, atau staff management.
+- Idempotency POS tetap unique per tenant; actor lain dengan key sama mendapat conflict tanpa menerima resource pertama.
+- Purchase cost, average cost, supplier last-buy price, margin, valuation, profit, dan billing tidak boleh masuk projection HTML/JSON/Livewire Staff.
+
 ### Billing
 
 - `subscriptions.status` adalah source of truth billing.

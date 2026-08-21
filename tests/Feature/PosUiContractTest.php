@@ -6,19 +6,23 @@ use App\Models\User;
 use App\Services\TenantContext;
 use Livewire\Livewire;
 
-it('renders the Owner POS scanner and keyboard contract while denying Staff', function () {
+it('renders the scanner and payment contract for active Owner and Staff', function () {
+    expect(file_get_contents(resource_path('views/livewire/pos-screen.blade.php')))
+        ->toContain('wire:blur="updateDiscount(');
+
     [, $owner] = makeTenantUser();
-    $staff = User::create([
+    $staff = makeTenantScopedUser([
         'name' => 'POS Staff',
         'email' => 'pos-staff@example.test',
         'no_hp' => '083333333333',
         'password' => 'password',
-        'role' => UserRole::Staff,
-    ]);
+    ], UserRole::Staff);
 
     $this->actingAs($owner)
         ->get('/app/pos')
         ->assertOk()
+        ->assertSee('/app/stock-movements', false)
+        ->assertDontSee('/app/pos-transactions', false)
         ->assertSee('BarcodeDetector', false)
         ->assertSee("event.key === 'F1'", false)
         ->assertSee("event.key === 'F2'", false)
@@ -62,5 +66,11 @@ it('renders the Owner POS scanner and keyboard contract while denying Staff', fu
         ])
         ->assertSee('Cetak Struk');
 
-    $this->actingAs($staff)->get('/app/pos')->assertForbidden();
+    $this->actingAs($staff)
+        ->get('/app/pos')
+        ->assertOk()
+        ->assertSee('Pilih Pembayaran')
+        ->assertSee('Diskon')
+        ->assertSee('/app/pos-transactions', false)
+        ->assertDontSee('/app/stock-movements', false);
 });

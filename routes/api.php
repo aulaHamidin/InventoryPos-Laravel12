@@ -7,13 +7,14 @@ use App\Http\Controllers\Api\PosController;
 use App\Http\Controllers\Api\ShoppingListController;
 use App\Http\Controllers\Api\StockOpnameController;
 use App\Http\Controllers\ReportController;
+use App\Http\Middleware\EnsureTenantUserActive;
 use App\Http\Middleware\SetTenantContext;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
     Route::post('/auth/login', [AuthController::class, 'login']);
 
-    Route::middleware(['auth:sanctum', SetTenantContext::class])->group(function (): void {
+    Route::middleware(['auth:sanctum', EnsureTenantUserActive::class, SetTenantContext::class])->group(function (): void {
         Route::post('/auth/logout', [AuthController::class, 'logout']);
 
         Route::get('/items', [InventoryController::class, 'index']);

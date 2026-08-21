@@ -4,12 +4,11 @@ use App\Enums\AdminRole;
 use App\Enums\UserRole;
 use App\Models\Admin;
 use App\Models\AuditLog;
-use App\Models\User;
 use App\Services\TenantContext;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
 
-it('isolates Filament records and rejects Staff panel access', function () {
+it('isolates Filament records and gives Staff a read only operational panel', function () {
     [$tenantA, $ownerA] = makeTenantUser();
     $itemA = makeInventoryItem(['nama' => 'ONLY TENANT A']);
     [, $ownerB] = makeTenantUser();
@@ -23,13 +22,22 @@ it('isolates Filament records and rejects Staff panel access', function () {
         ->assertDontSee($itemB->nama);
 
     TenantContext::run($tenantA, function () use (&$staff): void {
-        $staff = User::create([
+        $staff = makeTenantScopedUser([
             'name' => 'Panel Staff', 'email' => 'panel-staff@example.test',
-            'no_hp' => '082222222222', 'password' => 'password', 'role' => UserRole::Staff,
-        ]);
+            'no_hp' => '082222222222', 'password' => 'password',
+        ], UserRole::Staff);
     });
 
-    $this->actingAs($staff)->get('/app')->assertForbidden();
+    expect($staff->role)->toBe(UserRole::Staff)
+        ->and($staff->is_active)->toBeTrue()
+        ->and($staff->canAccessPanel(filament()->getPanel('app')))->toBeTrue();
+    auth()->forgetGuards();
+    $this->flushSession();
+    $this->actingAs($staff)->get('/app')->assertOk();
+    $this->get('/app/items')->assertOk()->assertSee($itemA->nama)->assertDontSee($itemB->nama);
+    $this->get('/app/items/create')->assertForbidden();
+    $this->get('/app/shopping-lists')->assertForbidden();
+    $this->get('/app/report-exports')->assertForbidden();
 });
 
 it('audits Filament login and logout events', function () {

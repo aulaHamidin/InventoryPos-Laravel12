@@ -422,12 +422,21 @@ new_avg = ((old_stock × old_avg) + (in_qty × in_cost)) / (old_stock + in_qty)
 
 ## Fase 8 — Staff & Multi-Kasir
 
+### Contract status — 2026-08-21
+
+- [x] CD-8.1 ditutup oleh `document-delta-f8-staff-multi-cashier.md` pada baseline F7 `ad07521fbdf81ccf5a3fe9185fecac5eb96fa01e`.
+- [x] Source of truth dan enforcement contract disinkronkan.
+- [x] `implementation-plan-fase-8.md` disusun dan disetujui sebelum coding.
+
 ### Deliverables
-- Staff creation/invitation workflow
-- Staff policies: **CANNOT** access purchase cost, margin, inventory value, profit, billing, staff management
-- Staff **CAN** operate POS
-- Concurrent POS sessions support
-- Role visibility tests for all UI surfaces
+
+- Owner membuat Staff dengan password awal minimal 12 karakter dan mengelola profil/reset/activate/deactivate tanpa invitation email.
+- `is_active` dan `auth_version` merevoke sesi/token lama secara driver-independent; runtime Redis menjadi gate CI.
+- Staff policies: **CANNOT** access purchase cost, average cost, margin, inventory value, profit, billing, staff management, stock mutation, opname, receiving, Shopping List, report/export, void, return, atau refund.
+- Staff **CAN** operate POS cash/QRIS/transfer dengan diskon existing, membaca item/supplier aman, serta melihat dan membayar transaksi kasir sendiri.
+- Idempotency tetap unique per tenant; key milik kasir lain menghasilkan `409` tanpa membuka transaksi pertama.
+- Concurrent POS sessions menjaga stock/payment/movement/actor invariant.
+- Projection, permission, Redis session revocation, migration upgrade/rollback, dan role visibility tests mencakup seluruh UI/API/Livewire surface.
 
 ---
 

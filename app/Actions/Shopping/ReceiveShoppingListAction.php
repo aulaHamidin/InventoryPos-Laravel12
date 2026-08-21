@@ -10,6 +10,7 @@ use App\Models\ShoppingList;
 use App\Models\ShoppingListItem;
 use App\Models\User;
 use App\Support\AuditContext;
+use App\Support\OwnerActorGuard;
 use App\Support\OwnershipGuard;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -23,7 +24,7 @@ class ReceiveShoppingListAction
 
     public function execute(int $shoppingListId, array $receivedItems, User $actor, ?AuditContext $context = null): ShoppingList
     {
-        OwnershipGuard::validate(User::class, $actor->getKey());
+        OwnerActorGuard::assert($actor);
         OwnershipGuard::validate(ShoppingList::class, $shoppingListId);
 
         return DB::transaction(function () use ($shoppingListId, $receivedItems, $actor, $context): ShoppingList {

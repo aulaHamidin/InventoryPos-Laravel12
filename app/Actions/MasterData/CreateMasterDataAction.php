@@ -8,7 +8,7 @@ use App\Models\Rack;
 use App\Models\Supplier;
 use App\Models\User;
 use App\Support\AuditContext;
-use App\Support\OwnershipGuard;
+use App\Support\OwnerActorGuard;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
@@ -24,7 +24,7 @@ class CreateMasterDataAction
         if (! in_array($modelClass, self::ALLOWED, true)) {
             throw new InvalidArgumentException('Unsupported master model.');
         }
-        OwnershipGuard::validate(User::class, $actor->getKey());
+        OwnerActorGuard::assert($actor);
 
         return DB::transaction(function () use ($modelClass, $data, $actor, $context): Model {
             $model = $modelClass::create($data);

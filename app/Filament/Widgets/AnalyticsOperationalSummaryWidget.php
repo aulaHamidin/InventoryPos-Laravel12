@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets;
 
+use App\Enums\UserRole;
 use App\Models\Item;
 use App\Support\AnalyticsClock;
 use Carbon\CarbonImmutable;
@@ -16,6 +17,12 @@ class AnalyticsOperationalSummaryWidget extends StatsOverviewWidget
     protected static bool $isLazy = true;
 
     protected int|string|array $columnSpan = 'full';
+
+    public static function canView(): bool
+    {
+        return auth()->user()?->is_active === true
+            && in_array(auth()->user()?->role, [UserRole::Owner, UserRole::Staff], true);
+    }
 
     protected function getStats(): array
     {

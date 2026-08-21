@@ -2,6 +2,8 @@
 
 namespace App\Filament\Widgets;
 
+use App\Enums\UserRole;
+use App\Filament\Resources\ItemResource;
 use App\Models\Item;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
@@ -32,7 +34,9 @@ class LowStockWidget extends BaseWidget
                 ->description('Segera lakukan pembelian ulang')
                 ->descriptionIcon('heroicon-m-exclamation-triangle')
                 ->color('danger')
-                ->url(route('filament.app.resources.shopping-lists.index')),
+                ->url(auth()->user()?->role === UserRole::Staff
+                    ? ItemResource::getUrl('index', ['tableFilters' => ['low_stock' => ['isActive' => true]]])
+                    : route('filament.app.resources.shopping-lists.index')),
         ];
     }
 }

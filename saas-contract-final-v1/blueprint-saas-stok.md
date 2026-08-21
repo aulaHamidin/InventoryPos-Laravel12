@@ -98,6 +98,8 @@ Tidak boleh:
 - void;
 - return/refund authorization.
 
+Fase 8 mengunci staff pada POS (termasuk diskon existing), item/stok/low-stock/supplier read-only, analytics operasional non-finansial, dan transaksi `cashier_id` sendiri. Stock mutation/opname/receiving, Shopping List, report/export, void/return/refund, billing, dan staff management tetap Owner-only.
+
 ### Super Admin
 
 Boleh:
@@ -337,6 +339,8 @@ Satu transaksi dapat memiliki payment record, tetapi status payment tidak digabu
 ### 10.3 Manual payment idempotency
 
 `POST pay-manual` wajib memakai `Idempotency-Key` unique per tenant. Key sama dengan transaction/method/reference/note yang sama mengembalikan hasil lama; key sama dengan payload atau transaction berbeda menghasilkan `IDEMPOTENCY_CONFLICT`.
+
+Key yang sudah digunakan actor lain juga menghasilkan `IDEMPOTENCY_CONFLICT`; resource actor pertama tidak dikembalikan.
 
 Duplicate key race harus ditangani dari unique constraint tanpa berubah menjadi HTTP 500.
 

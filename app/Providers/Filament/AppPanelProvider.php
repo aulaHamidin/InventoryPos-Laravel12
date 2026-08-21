@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Http\Middleware\EnsureTenantUserActive;
 use App\Http\Middleware\SetTenantContext;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -49,6 +50,6 @@ class AppPanelProvider extends PanelProvider
                 AuthenticateSession::class, ShareErrorsFromSession::class, VerifyCsrfToken::class,
                 SubstituteBindings::class, DisableBladeIconComponents::class, DispatchServingFilamentEvent::class,
             ])
-            ->authMiddleware([Authenticate::class, SetTenantContext::class]);
+            ->authMiddleware([Authenticate::class, EnsureTenantUserActive::class, SetTenantContext::class]);
     }
 }

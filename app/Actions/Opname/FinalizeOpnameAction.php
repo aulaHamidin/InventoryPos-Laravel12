@@ -12,6 +12,7 @@ use App\Models\StockOpnameDetail;
 use App\Models\User;
 use App\Services\TenantContext;
 use App\Support\AuditContext;
+use App\Support\OwnerActorGuard;
 use App\Support\OwnershipGuard;
 use Illuminate\Support\Facades\DB;
 
@@ -21,7 +22,7 @@ class FinalizeOpnameAction
 
     public function execute(int $opnameId, User $actor, ?AuditContext $context = null): array
     {
-        OwnershipGuard::validate(User::class, $actor->getKey());
+        OwnerActorGuard::assert($actor);
         OwnershipGuard::validate(StockOpname::class, $opnameId);
 
         return DB::transaction(function () use ($opnameId, $actor, $context): array {

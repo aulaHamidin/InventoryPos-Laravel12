@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Actions\Audit\RecordAuditAction;
 use App\Auth\TenantUserProvider;
+use App\Http\Middleware\EnsureTenantUserActive;
 use App\Http\Middleware\SetTenantContext;
 use App\Models\PersonalAccessToken;
 use App\Models\User;
@@ -25,13 +26,16 @@ class AppServiceProvider extends ServiceProvider
     {
         Auth::provider('tenant_eloquent', fn ($app, array $config) => new TenantUserProvider($app['hash'], $config['model']));
         Sanctum::usePersonalAccessTokenModel(PersonalAccessToken::class);
-        Livewire::addPersistentMiddleware([SetTenantContext::class]);
+        Livewire::addPersistentMiddleware([EnsureTenantUserActive::class, SetTenantContext::class]);
         Event::listen(Login::class, function (Login $event): void {
             if (! $event->user instanceof User || $event->user->tenant === null) {
                 return;
             }
 
             TenantContext::set($event->user->tenant);
+            if ($event->guard === 'web' && ! app()->runningInConsole() && request()->hasSession()) {
+                request()->session()->put(EnsureTenantUserActive::SESSION_KEY, (int) $event->user->auth_version);
+            }
             app(RecordAuditAction::class)->execute(
                 'auth.filament_login',
                 $event->user,

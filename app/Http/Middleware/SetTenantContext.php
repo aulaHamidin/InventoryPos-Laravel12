@@ -14,7 +14,7 @@ class SetTenantContext
         $user = $request->user();
 
         if ($user !== null) {
-            if ($user->tenant_id === null || $user->tenant === null || ! $user->tenant->canOperate()) {
+            if (! $user->is_active || $user->tenant_id === null || $user->tenant === null || ! $user->tenant->canOperate()) {
                 abort(403, 'Tenant context is unavailable.');
             }
 

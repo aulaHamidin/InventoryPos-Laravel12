@@ -12,7 +12,7 @@ use App\Http\Controllers\Controller;
 use App\Models\PosPayment;
 use App\Models\PosTransaction;
 use App\Support\AuditContext;
-use App\Support\OwnershipGuard;
+use App\Support\PosActorGuard;
 use App\Support\PosRefundCalculator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -28,6 +28,10 @@ class PosController extends Controller
             'items' => ['required', 'array', 'min:1'], 'items.*.item_id' => ['required', 'integer'],
             'items.*.qty' => ['required', 'integer', 'min:1'],
             'items.*.discount_amount' => ['nullable', 'decimal:0,2', 'min:0'],
+            'cashier_id' => ['prohibited'],
+            'actor_id' => ['prohibited'],
+            'user_id' => ['prohibited'],
+            'tenant_id' => ['prohibited'],
         ]);
 
         $transaction = $action->execute(
@@ -44,14 +48,19 @@ class PosController extends Controller
             'subtotal_amount' => $transaction->subtotal_amount,
             'discount_amount' => $transaction->discount_amount,
             'total_amount' => $transaction->total_amount,
-            'items' => $transaction->items,
         ], 'Checkout berhasil.', 201);
     }
 
     public function payCash(Request $request, PayCashAction $action, int $id): JsonResponse
     {
-        $this->authorize('update', OwnershipGuard::validate(PosTransaction::class, $id));
-        $data = $request->validate(['cash_received' => ['required', 'decimal:0,2', 'min:0']]);
+        $this->authorize('pay', PosActorGuard::transaction($request->user(), $id));
+        $data = $request->validate([
+            'cash_received' => ['required', 'decimal:0,2', 'min:0'],
+            'cashier_id' => ['prohibited'],
+            'confirmed_by' => ['prohibited'],
+            'user_id' => ['prohibited'],
+            'tenant_id' => ['prohibited'],
+        ]);
         $result = $action->execute($id, $data['cash_received'], $request->user(), AuditContext::fromRequest($request));
 
         return $this->success([
@@ -70,7 +79,7 @@ class PosController extends Controller
 
     public function payManual(Request $request, ConfirmManualPaymentAction $action, int $id): JsonResponse
     {
-        $this->authorize('update', OwnershipGuard::validate(PosTransaction::class, $id));
+        $this->authorize('pay', PosActorGuard::transaction($request->user(), $id));
         $data = $request->validate([
             'method' => ['required', 'string', 'in:qris,transfer'],
             'reference' => ['nullable', 'string', 'max:255'],
@@ -121,7 +130,7 @@ class PosController extends Controller
 
     public function void(Request $request, VoidPosTransactionAction $action, int $id): JsonResponse
     {
-        $this->authorize('update', OwnershipGuard::validate(PosTransaction::class, $id));
+        $this->authorize('void', PosActorGuard::transaction($request->user(), $id));
         $data = $request->validate(['reason' => ['required', 'string', 'max:1000']]);
         $result = $action->execute($id, $data['reason'], $request->user(), AuditContext::fromRequest($request));
 
@@ -130,7 +139,7 @@ class PosController extends Controller
 
     public function returnItems(Request $request, ReturnPosTransactionAction $action, int $id): JsonResponse
     {
-        $this->authorize('update', OwnershipGuard::validate(PosTransaction::class, $id));
+        $this->authorize('return', PosActorGuard::transaction($request->user(), $id));
         $data = $request->validate([
             'items' => ['required', 'array', 'min:1'],
             'items.*.pos_transaction_item_id' => ['required', 'integer'],
@@ -146,8 +155,8 @@ class PosController extends Controller
     public function markRefunded(Request $request, MarkPosPaymentRefundedAction $action, int $id): JsonResponse
     {
         /** @var PosPayment $payment */
-        $payment = OwnershipGuard::validate(PosPayment::class, $id);
-        $this->authorize('update', $payment);
+        $payment = PosActorGuard::payment($request->user(), $id);
+        $this->authorize('refund', $payment);
         $data = $request->validate([
             'refunded_amount' => ['required', 'decimal:0,2', 'min:0'],
             'note' => ['required', 'string', 'max:1000'],
@@ -167,7 +176,7 @@ class PosController extends Controller
 
     public function status(Request $request, int $id): JsonResponse
     {
-        $transaction = OwnershipGuard::validate(PosTransaction::class, $id);
+        $transaction = PosActorGuard::transaction($request->user(), $id);
         $this->authorize('view', $transaction);
         $payment = $transaction->payments()->with('confirmedBy')->latest('id')->first();
         if ($payment !== null) {

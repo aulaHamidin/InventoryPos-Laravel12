@@ -182,7 +182,7 @@
                             </div>
                             <label class="text-xs text-gray-500">Diskon baris
                                 <input type="number" min="0" step="0.01" value="{{ $item['discount_amount'] }}"
-                                    wire:change="updateDiscount({{ $index }}, $event.target.value)"
+                                    wire:blur="updateDiscount({{ $index }}, $event.target.value)"
                                     class="mt-1 w-full rounded-lg border-gray-300 bg-white px-2 py-1 text-right dark:bg-gray-700">
                             </label>
                         </div>

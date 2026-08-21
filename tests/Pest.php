@@ -27,15 +27,22 @@ function makeTenantUser(UserRole $role = UserRole::Owner, array $tenantAttribute
     ], $tenantAttributes));
 
     TenantContext::set($tenant);
-    $user = User::create([
+    $user = makeTenantScopedUser([
         'name' => "User {$suffix}",
         'email' => "{$suffix}@example.test",
         'no_hp' => '08'.random_int(1000000000, 9999999999),
         'password' => 'password',
-        'role' => $role,
-    ]);
+    ], $role);
 
     return [$tenant, $user];
+}
+
+function makeTenantScopedUser(array $attributes, UserRole $role = UserRole::Owner): User
+{
+    $user = User::create($attributes);
+    $user->forceFill(['role' => $role])->save();
+
+    return $user->fresh();
 }
 
 function makeInventoryItem(array $attributes = []): Item

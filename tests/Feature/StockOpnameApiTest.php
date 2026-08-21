@@ -2,7 +2,6 @@
 
 use App\Enums\UserRole;
 use App\Models\Rack;
-use App\Models\User;
 use App\Services\TenantContext;
 use Laravel\Sanctum\Sanctum;
 
@@ -67,10 +66,10 @@ it('hides foreign opname ids and denies Staff', function () {
     $this->postJson("/api/v1/opname/{$id}/finalize")->assertNotFound();
 
     TenantContext::set($tenantA);
-    $staff = User::create([
+    $staff = makeTenantScopedUser([
         'name' => 'Opname Staff', 'email' => 'opname-staff@example.test', 'no_hp' => '081234567890',
-        'password' => 'password', 'role' => UserRole::Staff,
-    ]);
+        'password' => 'password',
+    ], UserRole::Staff);
     Sanctum::actingAs($staff);
     $this->getJson('/api/v1/opname')->assertForbidden();
 });

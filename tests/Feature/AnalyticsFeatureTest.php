@@ -117,10 +117,10 @@ it('denies Staff and hides cross tenant smart threshold targets', function () {
     [$tenantA, $ownerA] = makeTenantUser();
     $itemA = makeInventoryItem();
     TenantContext::run($tenantA, function () use (&$staff): void {
-        $staff = User::create([
+        $staff = makeTenantScopedUser([
             'name' => 'Threshold Staff', 'email' => 'threshold-staff@example.test',
-            'no_hp' => '085555555555', 'password' => 'password', 'role' => UserRole::Staff,
-        ]);
+            'no_hp' => '085555555555', 'password' => 'password',
+        ], UserRole::Staff);
     });
     [, $ownerB] = makeTenantUser();
     $itemB = makeInventoryItem();
@@ -260,10 +260,10 @@ it('updates dead stock settings through the owner action and queues a tenant ref
     Event::assertDispatched(TenantAnalyticsRecalculationRequested::class, fn ($event): bool => $event->tenantId === $tenant->id && $event->reason === 'dead_stock_days_changed');
 
     TenantContext::run($tenant, function () use (&$staff): void {
-        $staff = User::create([
+        $staff = makeTenantScopedUser([
             'name' => 'Analytics Staff', 'email' => 'analytics-staff@example.test',
-            'no_hp' => '084444444444', 'password' => 'password', 'role' => UserRole::Staff,
-        ]);
+            'no_hp' => '084444444444', 'password' => 'password',
+        ], UserRole::Staff);
     });
     expect(fn () => app(UpdateTenantAnalyticsSettingsAction::class)->execute(30, $staff))
         ->toThrow(AuthorizationException::class);

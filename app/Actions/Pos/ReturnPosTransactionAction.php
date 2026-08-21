@@ -18,9 +18,9 @@ use App\Notifications\PosRefundRequired;
 use App\Services\TenantContext;
 use App\Support\AuditContext;
 use App\Support\Decimal;
+use App\Support\OwnerActorGuard;
 use App\Support\OwnershipGuard;
 use App\Support\PosRefundCalculator;
-use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\ValidationException;
@@ -186,9 +186,6 @@ class ReturnPosTransactionAction
 
     private function assertOwner(User $actor): void
     {
-        OwnershipGuard::validate(User::class, $actor->getKey());
-        if ($actor->role !== UserRole::Owner) {
-            throw new AuthorizationException;
-        }
+        OwnerActorGuard::assert($actor);
     }
 }

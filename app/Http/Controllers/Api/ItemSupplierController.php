@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Actions\Inventory\DeleteItemSupplierAction;
 use App\Actions\Inventory\SetPreferredSupplierAction;
 use App\Actions\Inventory\UpsertItemSupplierAction;
+use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Models\Item;
 use App\Models\ItemSupplier;
@@ -20,7 +21,22 @@ class ItemSupplierController extends Controller
         $model = OwnershipGuard::validate(Item::class, $item);
         $this->authorize('view', $model);
 
-        return $this->success($model->itemSupplierLinks()->with('supplier')->orderByDesc('is_preferred')->get());
+        $links = $model->itemSupplierLinks()->with('supplier')->orderByDesc('is_preferred')->get();
+        if ($request->user()->role === UserRole::Staff) {
+            return $this->success($links->map(fn (ItemSupplier $link): array => [
+                'supplier_sku' => $link->supplier_sku,
+                'lead_time_days' => $link->lead_time_days,
+                'is_preferred' => $link->is_preferred,
+                'supplier' => $link->supplier ? [
+                    'id' => $link->supplier->id,
+                    'nama' => $link->supplier->nama,
+                    'kontak' => $link->supplier->kontak,
+                    'alamat' => $link->supplier->alamat,
+                ] : null,
+            ])->values());
+        }
+
+        return $this->success($links);
     }
 
     public function store(Request $request, int $item, UpsertItemSupplierAction $action): JsonResponse

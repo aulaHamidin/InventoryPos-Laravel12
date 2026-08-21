@@ -6,7 +6,6 @@ use App\Actions\Reports\QueueReportExportAction;
 use App\Enums\UserRole;
 use App\Jobs\GenerateReportExport;
 use App\Models\ReportExport;
-use App\Models\User;
 use App\Notifications\ReportExportReady;
 use App\Services\TenantContext;
 use Illuminate\Support\Facades\Notification;
@@ -57,13 +56,12 @@ it('writes completed report to private storage and notifies the owner', function
 
 it('shows export progress to Owner and protects private files by tenant and role', function () {
     [$tenantA, $ownerA] = makeTenantUser();
-    $staffA = User::create([
+    $staffA = makeTenantScopedUser([
         'name' => 'Report Staff',
         'email' => 'report-staff@example.test',
         'no_hp' => '084444444444',
         'password' => 'password',
-        'role' => UserRole::Staff,
-    ]);
+    ], UserRole::Staff);
     Storage::fake('local');
 
     $path = "report-exports/{$tenantA->id}/stock-a.xlsx";
