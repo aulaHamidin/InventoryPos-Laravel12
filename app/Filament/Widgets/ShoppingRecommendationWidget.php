@@ -5,6 +5,7 @@ namespace App\Filament\Widgets;
 use App\Enums\UserRole;
 use App\Filament\Resources\ShoppingListResource;
 use App\Models\Item;
+use App\Services\ImpersonationContext;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 use Throwable;
@@ -19,7 +20,7 @@ class ShoppingRecommendationWidget extends StatsOverviewWidget
 
     public static function canView(): bool
     {
-        return auth()->user()?->role === UserRole::Owner
+        return ! ImpersonationContext::isSupport() && auth()->user()?->role === UserRole::Owner
             && auth()->user()?->is_active === true;
     }
 

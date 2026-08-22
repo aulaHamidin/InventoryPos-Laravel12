@@ -3,6 +3,7 @@
 namespace App\Actions\Inventory;
 
 use App\Actions\Audit\RecordAuditAction;
+use App\Enums\SubscriptionCapability;
 use App\Models\Item;
 use App\Models\StockMovement;
 use App\Models\User;
@@ -36,7 +37,7 @@ class StockOutAction
             throw ValidationException::withMessages(['movement_type' => ['Tipe pergerakan tidak valid.']]);
         }
 
-        OwnerActorGuard::assert($actor);
+        OwnerActorGuard::assert($actor, SubscriptionCapability::Operate);
         OwnershipGuard::validate(Item::class, $itemId);
 
         return DB::transaction(function () use ($itemId, $qty, $actor, $movementType, $referenceType, $referenceId, $note, $context): StockMovement {

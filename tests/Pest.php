@@ -1,8 +1,11 @@
 <?php
 
+use App\Enums\SubscriptionStatus;
 use App\Enums\UserRole;
 use App\Models\Category;
 use App\Models\Item;
+use App\Models\Plan;
+use App\Models\Subscription;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\TenantContext;
@@ -25,6 +28,12 @@ function makeTenantUser(UserRole $role = UserRole::Owner, array $tenantAttribute
         'allow_negative_stock' => false,
         'dead_stock_days' => 90,
     ], $tenantAttributes));
+    $legacy = Plan::query()->where('code', 'LEGACY-F0-F9')->firstOrFail();
+    Subscription::query()->create([
+        'tenant_id' => $tenant->getKey(), 'plan_id' => $legacy->getKey(),
+        'status' => SubscriptionStatus::Active, 'starts_at' => $tenant->created_at,
+        'ends_at' => '9999-12-31 16:59:59',
+    ]);
 
     TenantContext::set($tenant);
     $user = makeTenantScopedUser([

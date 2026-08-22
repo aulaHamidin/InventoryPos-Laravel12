@@ -470,15 +470,14 @@ Contract decision: CD-9.1 untuk split F9A/F9B dan [`document-delta-f9a-rate-limi
 ## Fase 10 — Billing MRR & Admin Pusat *(Setelah F9A)*
 
 ### Deliverables
-- `plans`, `subscriptions`, `invoices`, `billing_payments`, `subscription_events` migrations
-- Subscription state machine: trial → active → past_due → suspended → expired
-- `CreateSubscriptionAction` with trial invariant (1 trial/phone lifetime)
-- Invoice generation
-- Manual payment verification workflow
-- Filament admin panel: tenant management, subscription management
-- `impersonation_sessions` + `tenant_deletion_requests` migrations
-- Impersonation workflow with audit + UI banner
-- `PurgeTenantCommand` with safety checks + `ON DELETE CASCADE`
+- CD-10.1 dan [`implementation-plan-fase-10.md`](implementation-plan-fase-10.md) sebagai kontrak fase.
+- Billing schema, Legacy backfill, generated uniqueness, immutable plan, lifetime `trial_claims`, dan active-only MRR.
+- Jakarta aging: trial→expired, active→past_due, past_due→suspended setelah grace tujuh hari.
+- Manual invoice/payment record→verify/reject dengan lock Tenant→Subscription→Invoice→Payment.
+- Mandatory Admin/Support TOTP, auth-version session revocation, dan minimum Support projection.
+- Filament Admin/Owner billing UI serta Owner read-only billing/deletion API; tidak ada Admin JSON/pay/webhook F10.
+- Read-only Owner impersonation maksimum 30 menit dengan banner/audit.
+- Deletion retention 30 hari, cancellation sebelum queued, `PurgeTenantCommand`, trial claim, dan global purge tombstone.
 
 ---
 

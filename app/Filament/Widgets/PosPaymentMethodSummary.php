@@ -5,6 +5,7 @@ namespace App\Filament\Widgets;
 use App\Enums\PosPaymentMethod;
 use App\Enums\UserRole;
 use App\Models\PosPayment;
+use App\Services\ImpersonationContext;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 
@@ -16,7 +17,7 @@ class PosPaymentMethodSummary extends StatsOverviewWidget
 
     public static function canView(): bool
     {
-        return auth()->user()?->role === UserRole::Owner
+        return ! ImpersonationContext::isSupport() && auth()->user()?->role === UserRole::Owner
             && auth()->user()?->is_active === true;
     }
 

@@ -4,11 +4,14 @@ namespace App\Filament\Pages;
 
 use App\Actions\Shopping\ReceiveShoppingListAction;
 use App\Enums\ShoppingListStatus;
+use App\Enums\SubscriptionCapability;
 use App\Enums\UserRole;
 use App\Filament\Resources\ShoppingListResource;
 use App\Models\ShoppingList;
+use App\Services\ImpersonationContext;
 use App\Support\AuditContext;
 use App\Support\OwnershipGuard;
+use App\Support\SubscriptionCapabilityService;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\TextInput;
@@ -35,7 +38,9 @@ class ReceiveShoppingList extends Page implements HasForms
     public static function canAccess(): bool
     {
         return auth()->user()?->role === UserRole::Owner
-            && auth()->user()?->is_active === true;
+            && auth()->user()?->is_active === true
+            && ! ImpersonationContext::active()
+            && app(SubscriptionCapabilityService::class)->allows(auth()->user(), SubscriptionCapability::Operate);
     }
 
     public function mount(): void

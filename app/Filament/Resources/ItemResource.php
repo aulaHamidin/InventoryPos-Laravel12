@@ -9,12 +9,15 @@ use App\Actions\Inventory\StockInAction;
 use App\Actions\Inventory\UpsertItemSupplierAction;
 use App\Actions\Reports\QueueReportExportAction;
 use App\Enums\MovementClass;
+use App\Enums\SubscriptionCapability;
 use App\Enums\UserRole;
 use App\Filament\Resources\ItemResource\Pages;
 use App\Models\Item;
 use App\Models\Supplier;
+use App\Services\ImpersonationContext;
 use App\Support\AnalyticsClock;
 use App\Support\AuditContext;
+use App\Support\SubscriptionCapabilityService;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
@@ -128,7 +131,7 @@ class ItemResource extends Resource
             ->actions([
                 Tables\Actions\Action::make('stock_in')
                     ->label('Stok Masuk')->icon('heroicon-o-arrow-down-tray')->color('success')
-                    ->visible(fn (): bool => static::ownerCanMutate())
+                    ->visible(fn (): bool => static::ownerCanOperate())
                     ->form([
                         Forms\Components\Placeholder::make('stok_sebelum')->content(fn (Item $record): string => (string) $record->stok_saat_ini),
                         Forms\Components\TextInput::make('qty')->numeric()->minValue(1)->required(),
@@ -146,7 +149,7 @@ class ItemResource extends Resource
                     }),
                 Tables\Actions\Action::make('adjust_stock')
                     ->label('Sesuaikan')->icon('heroicon-o-adjustments-horizontal')->color('warning')
-                    ->visible(fn (): bool => static::ownerCanMutate())
+                    ->visible(fn (): bool => static::ownerCanOperate())
                     ->form([
                         Forms\Components\Placeholder::make('stok_sebelum')->label('Stok sebelum')->content(fn (Item $record): string => (string) $record->stok_saat_ini),
                         Forms\Components\Select::make('direction')->options(['in' => 'Tambah', 'out' => 'Kurangi'])->required(),
@@ -260,7 +263,17 @@ class ItemResource extends Resource
     public static function ownerCanMutate(): bool
     {
         return auth()->user()?->role === UserRole::Owner
-            && auth()->user()?->is_active === true;
+            && auth()->user()?->is_active === true
+            && ! ImpersonationContext::active()
+            && app(SubscriptionCapabilityService::class)->allows(auth()->user(), SubscriptionCapability::Configure);
+    }
+
+    public static function ownerCanOperate(): bool
+    {
+        return auth()->user()?->role === UserRole::Owner
+            && auth()->user()?->is_active === true
+            && ! ImpersonationContext::active()
+            && app(SubscriptionCapabilityService::class)->allows(auth()->user(), SubscriptionCapability::Operate);
     }
 
     public static function getPages(): array

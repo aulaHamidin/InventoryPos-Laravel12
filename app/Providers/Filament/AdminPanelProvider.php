@@ -2,6 +2,8 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Admin\Pages\Auth\Login;
+use App\Http\Middleware\EnsureAdminAccess;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -25,9 +27,12 @@ class AdminPanelProvider extends PanelProvider
         return $panel
             ->id('admin')
             ->path('admin')
-            ->login()
+            ->login(Login::class)
             ->authGuard('admin')
             ->colors(['primary' => Color::Indigo])
+            ->discoverResources(in: app_path('Filament/Admin/Resources'), for: 'App\\Filament\\Admin\\Resources')
+            ->discoverPages(in: app_path('Filament/Admin/Pages'), for: 'App\\Filament\\Admin\\Pages')
+            ->discoverWidgets(in: app_path('Filament/Admin/Widgets'), for: 'App\\Filament\\Admin\\Widgets')
             ->pages([Pages\Dashboard::class])
             ->widgets([Widgets\AccountWidget::class, Widgets\FilamentInfoWidget::class])
             ->middleware([
@@ -35,6 +40,6 @@ class AdminPanelProvider extends PanelProvider
                 AuthenticateSession::class, ShareErrorsFromSession::class, VerifyCsrfToken::class,
                 SubstituteBindings::class, DisableBladeIconComponents::class, DispatchServingFilamentEvent::class,
             ])
-            ->authMiddleware([Authenticate::class]);
+            ->authMiddleware([Authenticate::class, EnsureAdminAccess::class]);
     }
 }

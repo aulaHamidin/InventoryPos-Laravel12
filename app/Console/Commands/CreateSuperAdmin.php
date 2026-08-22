@@ -35,10 +35,9 @@ class CreateSuperAdmin extends Command
             return self::FAILURE;
         }
 
-        Admin::create([
-            ...$validator->validated(),
-            'role' => AdminRole::SuperAdmin,
-        ]);
+        $admin = new Admin($validator->validated());
+        $admin->forceFill(['role' => AdminRole::SuperAdmin, 'is_active' => true, 'auth_version' => 1]);
+        $admin->save();
 
         $this->info('Super-admin created.');
 

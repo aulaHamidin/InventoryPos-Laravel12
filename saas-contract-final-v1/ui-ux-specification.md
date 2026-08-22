@@ -1453,6 +1453,10 @@ SUSPENDED
 
 UI tidak boleh mengubah subscription status.
 
+CD-10.1 menambahkan state `trial`, `expired`, dan missing/corrupt. Owner selalu memperoleh billing/deletion access; Staff tidak melihat Billing. Global banner menjelaskan grace operational `past_due`, read-only `suspended|expired`, serta operational ban yang lebih kuat.
+
+F10 tidak menampilkan tombol bayar gateway. Invoice history bersifat read-only dan manual verification hanya tersedia untuk Super Admin pada `/admin`.
+
 ---
 
 ## 41.1 Active
@@ -1553,6 +1557,10 @@ Tidak boleh ada kesan bahwa admin sedang menggunakan akun tersebut secara normal
 Alasan akses sensitif harus dicatat oleh backend/audit system.
 
 UI hanya menampilkan state dan context.
+
+F10: impersonation selalu read-only, maksimum 30 menit, dan hanya Owner aktif pada tenant operational-active. Support projection tidak memuat cost/margin/profit/MRR/amount/payment reference; Super Admin mendapat Owner projection tetapi tetap tidak dapat mutation.
+
+Panel Admin mewajibkan TOTP setup/challenge sebelum resource apa pun. Recovery code hanya ditampilkan sekali. Support tidak melihat mutation, MRR, amount, payment reference, atau credential metadata.
 
 ---
 

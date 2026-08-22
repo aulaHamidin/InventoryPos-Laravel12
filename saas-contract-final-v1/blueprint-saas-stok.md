@@ -590,11 +590,23 @@ expired
 
 Capability matrix harus eksplisit.
 
+CD-10.1 capability matrix:
+
+- `trial|active`: read, operational write, dan configuration write sesuai role;
+- `past_due`: read dan operational write; configuration/master/Staff/analytics mutation/export diblokir;
+- `suspended|expired`: read-only; Owner tetap dapat billing dan deletion;
+- missing/corrupt: Owner hanya billing/support/deletion, Staff ditolak;
+- operational ban selalu lebih kuat dan capability subscription tidak pernah menambah hak role.
+
+Scheduler Jakarta mengubah trial ke expired dan active ke past_due pada `ends_at`, lalu past_due ke suspended setelah tujuh hari. Expired terminal.
+
 `tenants.operational_status` tidak berubah oleh scheduler billing.
 
 ### Trial invariant
 
 Satu pemilik/nomor HP hanya satu trial sepanjang masa.
+
+Lifetime invariant dipertahankan setelah purge melalui unique HMAC pada `trial_claims` menggunakan secret `IDENTITY_HASH_KEY`; raw nomor HP tidak disimpan.
 
 `CreateSubscriptionAction`:
 
@@ -633,6 +645,8 @@ dengan FK child menggunakan `ON DELETE CASCADE`.
 Purge dieksekusi oleh satu scheduled command.
 
 Tidak ada penghapusan manual tersebar per tabel.
+
+Retention F10 adalah 30 hari. Owner dapat cancel sebelum approval dan Super Admin dapat cancel sebelum queued. Global `tenant.purged` tombstone tanpa PII bertahan setelah cascade.
 
 ---
 

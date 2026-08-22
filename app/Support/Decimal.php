@@ -43,4 +43,12 @@ final class Decimal
     {
         return bccomp($left, $right, self::SCALE);
     }
+
+    public static function formatIdr(string $value): string
+    {
+        [$whole, $fraction] = explode('.', self::money($value));
+        $whole = preg_replace('/\B(?=(\d{3})+(?!\d))/', '.', $whole) ?? $whole;
+
+        return 'Rp '.$whole.','.$fraction;
+    }
 }

@@ -5,11 +5,14 @@ namespace App\Filament\Resources;
 use App\Actions\Reports\QueueReportExportAction;
 use App\Enums\PosPaymentMethod;
 use App\Enums\PosTransactionStatus;
+use App\Enums\SubscriptionCapability;
 use App\Enums\UserRole;
 use App\Filament\Resources\PosTransactionResource\Pages;
 use App\Models\PosTransaction;
+use App\Services\ImpersonationContext;
 use App\Support\AuditContext;
 use App\Support\PosRefundCalculator;
+use App\Support\SubscriptionCapabilityService;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Infolists;
@@ -236,7 +239,9 @@ class PosTransactionResource extends Resource
     public static function ownerCanManage(): bool
     {
         return auth()->user()?->role === UserRole::Owner
-            && auth()->user()?->is_active === true;
+            && auth()->user()?->is_active === true
+            && ! ImpersonationContext::active()
+            && app(SubscriptionCapabilityService::class)->allows(auth()->user(), SubscriptionCapability::Operate);
     }
 
     public static function getPages(): array

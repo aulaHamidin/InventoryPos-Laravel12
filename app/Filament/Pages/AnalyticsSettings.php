@@ -3,9 +3,12 @@
 namespace App\Filament\Pages;
 
 use App\Actions\Analytics\UpdateTenantAnalyticsSettingsAction;
+use App\Enums\SubscriptionCapability;
 use App\Enums\UserRole;
+use App\Services\ImpersonationContext;
 use App\Services\TenantContext;
 use App\Support\AuditContext;
+use App\Support\SubscriptionCapabilityService;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
@@ -34,7 +37,9 @@ class AnalyticsSettings extends Page implements HasForms
     public static function canAccess(): bool
     {
         return auth()->user()?->role === UserRole::Owner
-            && auth()->user()?->is_active === true;
+            && auth()->user()?->is_active === true
+            && ! ImpersonationContext::active()
+            && app(SubscriptionCapabilityService::class)->allows(auth()->user(), SubscriptionCapability::Configure);
     }
 
     public function mount(): void

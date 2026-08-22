@@ -2,9 +2,12 @@
 
 namespace App\Filament\Resources;
 
+use App\Enums\SubscriptionCapability;
 use App\Enums\UserRole;
 use App\Filament\Resources\SupplierResource\Pages;
 use App\Models\Supplier;
+use App\Services\ImpersonationContext;
+use App\Support\SubscriptionCapabilityService;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -62,7 +65,7 @@ class SupplierResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make()->visible(
-                    fn (): bool => auth()->user()?->role === UserRole::Owner,
+                    fn (): bool => static::ownerCanMutate(),
                 ),
             ])
             ->bulkActions([]);
@@ -73,6 +76,13 @@ class SupplierResource extends Resource
         return [
             //
         ];
+    }
+
+    public static function ownerCanMutate(): bool
+    {
+        return auth()->user()?->role === UserRole::Owner
+            && ! ImpersonationContext::active()
+            && app(SubscriptionCapabilityService::class)->allows(auth()->user(), SubscriptionCapability::Configure);
     }
 
     public static function getPages(): array

@@ -2,6 +2,8 @@
 
 return [
 
+    'identity_hash_key' => env('IDENTITY_HASH_KEY'),
+
     /*
     |--------------------------------------------------------------------------
     | Third Party Services

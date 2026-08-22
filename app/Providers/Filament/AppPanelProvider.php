@@ -3,6 +3,7 @@
 namespace App\Providers\Filament;
 
 use App\Http\Middleware\EnsureTenantUserActive;
+use App\Http\Middleware\ResolveImpersonation;
 use App\Http\Middleware\SetTenantContext;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -13,6 +14,7 @@ use Filament\Pages;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\View\PanelsRenderHook;
 use Filament\Widgets;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -34,6 +36,7 @@ class AppPanelProvider extends PanelProvider
             ->databaseNotifications()
             ->colors(['primary' => Color::Indigo])
             ->theme(asset('css/filament/admin/theme.css'))
+            ->renderHook(PanelsRenderHook::BODY_START, fn () => view('filament.components.platform-banner'))
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([Pages\Dashboard::class])
@@ -50,6 +53,6 @@ class AppPanelProvider extends PanelProvider
                 AuthenticateSession::class, ShareErrorsFromSession::class, VerifyCsrfToken::class,
                 SubstituteBindings::class, DisableBladeIconComponents::class, DispatchServingFilamentEvent::class,
             ])
-            ->authMiddleware([Authenticate::class, EnsureTenantUserActive::class, SetTenantContext::class]);
+            ->authMiddleware([Authenticate::class, EnsureTenantUserActive::class, SetTenantContext::class, ResolveImpersonation::class]);
     }
 }

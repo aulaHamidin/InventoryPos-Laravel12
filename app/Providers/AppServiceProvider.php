@@ -3,13 +3,18 @@
 namespace App\Providers;
 
 use App\Actions\Audit\RecordAuditAction;
+use App\Auth\AdminUserProvider;
 use App\Auth\TenantUserProvider;
+use App\Http\Middleware\EnsureAdminAccess;
 use App\Http\Middleware\EnsureTenantUserActive;
+use App\Http\Middleware\ResolveImpersonation;
 use App\Http\Middleware\SetTenantContext;
+use App\Models\Admin;
 use App\Models\PersonalAccessToken;
 use App\Models\User;
 use App\Services\TenantContext;
 use App\Support\AuditContext;
+use App\Support\SubscriptionCapabilityService;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -25,7 +30,10 @@ use Livewire\Livewire;
 
 class AppServiceProvider extends ServiceProvider
 {
-    public function register(): void {}
+    public function register(): void
+    {
+        $this->app->scoped(SubscriptionCapabilityService::class);
+    }
 
     public function boot(): void
     {
@@ -41,11 +49,23 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('api-read', fn (Request $request): Limit => $this->apiLimit(300, $this->tenantUserKey($request)));
         RateLimiter::for('api-write', fn (Request $request): Limit => $this->apiLimit(120, $this->tenantUserKey($request)));
         RateLimiter::for('api-export', fn (Request $request): Limit => $this->apiLimit(10, $this->tenantUserKey($request)));
+        RateLimiter::for('admin-mfa', fn (Request $request): Limit => Limit::perMinute(5)->by(hash('sha256', sprintf(
+            '%s|%s',
+            Str::lower((string) Auth::guard('admin')->user()?->email),
+            $request->ip() ?? 'unknown',
+        ))));
 
         Auth::provider('tenant_eloquent', fn ($app, array $config) => new TenantUserProvider($app['hash'], $config['model']));
+        Auth::provider('admin_eloquent', fn ($app, array $config) => new AdminUserProvider($app['hash'], $config['model']));
         Sanctum::usePersonalAccessTokenModel(PersonalAccessToken::class);
-        Livewire::addPersistentMiddleware([EnsureTenantUserActive::class, SetTenantContext::class]);
+        Livewire::addPersistentMiddleware([EnsureTenantUserActive::class, SetTenantContext::class, ResolveImpersonation::class]);
         Event::listen(Login::class, function (Login $event): void {
+            if ($event->user instanceof Admin && $event->guard === 'admin' && request()->hasSession()) {
+                request()->session()->put(EnsureAdminAccess::VERSION_KEY, (int) $event->user->auth_version);
+                request()->session()->forget(EnsureAdminAccess::MFA_KEY);
+
+                return;
+            }
             if (! $event->user instanceof User || $event->user->tenant === null) {
                 return;
             }

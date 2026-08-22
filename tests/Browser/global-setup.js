@@ -1,5 +1,5 @@
 import { chromium } from '@playwright/test';
-import { hardeningManifest, login, ownerStatePath, staffStatePath } from './support.js';
+import { adminStatePath, enrollAdmin, hardeningManifest, login, ownerStatePath, staffStatePath } from './support.js';
 
 export default async function globalSetup() {
   const manifest = hardeningManifest();
@@ -17,6 +17,12 @@ export default async function globalSetup() {
       await context.storageState({ path: statePath });
       await context.close();
     }
+
+    const adminContext = await browser.newContext({ baseURL });
+    const adminPage = await adminContext.newPage();
+    await enrollAdmin(adminPage, manifest.platform_admin);
+    await adminContext.storageState({ path: adminStatePath });
+    await adminContext.close();
   } finally {
     await browser.close();
   }

@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\ReportExportResource\Pages;
 use App\Models\ReportExport;
+use App\Services\ImpersonationContext;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -80,5 +81,10 @@ class ReportExportResource extends Resource
         return [
             'index' => Pages\ListReportExports::route('/'),
         ];
+    }
+
+    public static function canViewAny(): bool
+    {
+        return ! ImpersonationContext::isSupport() && parent::canViewAny();
     }
 }
