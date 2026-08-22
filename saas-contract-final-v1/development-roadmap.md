@@ -293,6 +293,8 @@ CD-10.1 mengunci capability subscription, Legacy backfill, active-only MRR, plan
 
 Baseline resmi F10: `3c9cf4295b42abac8a3128098f645ad39176eff4`. Implementation plan khusus: [`implementation-plan-fase-10.md`](implementation-plan-fase-10.md) (**DISETUJUI UNTUK IMPLEMENTASI**).
 
+Status penutupan: **FASE 10 SELESAI — LOCAL/CI, DEPLOYMENT DITUNDA KE F9B**. Merge SHA F10 sekaligus baseline resmi F11: `9ba663a4c1d71a73b4c2182d96cd6dc90eb84868`.
+
 Fase ini melanjutkan shell `/admin` dari Fase 0 dengan resource operasional platform. Panel tenant tetap terisolasi di `/app`.
 
 Entry gate: F9A selesai, tidak ada P0, setiap P1 memiliki mitigasi/keputusan eksplisit, dan CI utama hijau.

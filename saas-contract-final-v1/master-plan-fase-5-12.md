@@ -488,6 +488,8 @@ Mengisi shell `/admin` dengan operasional platform: tenant, plan, subscription, 
 
 CD-10.1 telah disahkan melalui [`document-delta-f10-billing-admin.md`](document-delta-f10-billing-admin.md). Implementation plan: [`implementation-plan-fase-10.md`](implementation-plan-fase-10.md) (**DISETUJUI UNTUK IMPLEMENTASI**).
 
+Status penutupan: **FASE 10 SELESAI — LOCAL/CI, DEPLOYMENT DITUNDA KE F9B**. Merge SHA F10 sekaligus baseline resmi F11: `9ba663a4c1d71a73b4c2182d96cd6dc90eb84868`.
+
 ### 10.3 Deliverable
 
 **Billing schema dan state machine**
@@ -537,13 +539,13 @@ CD-10.1 telah disahkan melalui [`document-delta-f10-billing-admin.md`](document-
 
 ### 10.6 Exit checklist
 
-- [ ] CD-10.1 dan Admin 2FA gate selesai.
-- [ ] Billing schema/state/event/audit tests lulus.
-- [ ] Platform/tenant identity boundary lulus.
-- [ ] Impersonation dan deletion safety lulus.
-- [ ] Visual evidence lengkap.
-- [ ] Full quality gate dan CI remote hijau.
-- [ ] Fase 10 ditandai selesai.
+- [x] CD-10.1 dan Admin 2FA gate selesai.
+- [x] Billing schema/state/event/audit tests lulus.
+- [x] Platform/tenant identity boundary lulus.
+- [x] Impersonation dan deletion safety lulus.
+- [x] Visual evidence lengkap.
+- [x] Full quality gate dan CI remote hijau.
+- [x] Fase 10 ditandai selesai.
 
 ---
 
@@ -750,7 +752,7 @@ Evidence tidak boleh memuat `.env`, secret, access token, OTP nyata, webhook sig
 - [ ] Fase 9 — Hardening Pre-Deploy & Pilot Split.
   - [x] F9A — Hardening Pre-Deploy.
   - [ ] F9B — Deployment Pilot.
-- [ ] Fase 10 — Billing MRR & Admin Pusat.
+- [x] Fase 10 — Billing MRR & Admin Pusat.
 - [ ] Fase 11 — Self-Service Onboarding & Automated Billing.
 - [ ] Fase 12 — Observability Code-Complete & Runtime Acceptance.
   - [ ] Observability code-complete.
@@ -768,4 +770,4 @@ Evidence tidak boleh memuat `.env`, secret, access token, OTP nyata, webhook sig
 
 ## 16. Langkah Berikutnya
 
-CD-10.1 dan implementation plan F10 telah disahkan dengan baseline `3c9cf4295b42abac8a3128098f645ad39176eff4`. Langkah berikutnya adalah menjalankan implementation plan F10 — Billing MRR & Admin Pusat melalui local/CI tanpa deployment production. Fase 9 tetap terbuka; deployment production-like, migration/backfill runtime, backup/restore drill, dan acceptance operasional tetap menjadi gate F9B/release v1.
+Fase 10 telah selesai melalui local/CI pada merge SHA `9ba663a4c1d71a73b4c2182d96cd6dc90eb84868`, yang menjadi baseline resmi F11. Langkah berikutnya adalah menyusun CD-11.1 dan implementation plan F11 — Owner 2FA policy, OTP provider, serta Midtrans sandbox. Fase 9 tetap terbuka; deployment production-like, migration/backfill runtime, backup/restore drill, dan acceptance operasional tetap menjadi gate F9B/release v1.

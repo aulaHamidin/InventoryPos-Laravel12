@@ -1,10 +1,14 @@
 # Fase 10 Acceptance — Billing MRR & Admin Pusat
 
-Status: **IMPLEMENTASI LOKAL SELESAI — MENUNGGU REMOTE GATE**
+Status: **FASE 10 SELESAI — LOCAL/CI, DEPLOYMENT DITUNDA KE F9B**
 
 Baseline resmi: `3c9cf4295b42abac8a3128098f645ad39176eff4`
 
 SHA implementasi lokal: `46d5623032cf4b8c1f358b15b0055a0e02f9c720`
+
+SHA final branch: `16f4ff7b267cd34c9d3a23ce626a946c02db69a1`
+
+Merge SHA F10 / baseline resmi F11: `9ba663a4c1d71a73b4c2182d96cd6dc90eb84868`
 
 ## Kontrak dan implementasi
 
@@ -26,11 +30,11 @@ SHA implementasi lokal: `46d5623032cf4b8c1f358b15b0055a0e02f9c720`
 
 ## Gate remote
 
-- [ ] Full workflow CI pada SHA final hijau.
-- [ ] Job `billing-runtime`, `analytics-runtime`, `staff-runtime`, security, browser, dan hardening smoke hijau.
-- [ ] Manual F9A Hardening Baseline pada SHA final F10 hijau.
-- [ ] Tidak ada P0; setiap P1 decision-complete.
-- [ ] Merge SHA F10 dicatat sebagai baseline F11.
+- [x] [Full workflow CI `32584128556`](https://github.com/aulaHamidin/InventoryPos-Laravel12/actions/runs/32584128556) pada SHA final hijau.
+- [x] Job `billing-runtime`, `analytics-runtime`, `staff-runtime`, security, browser, dan hardening smoke hijau.
+- [x] [Manual F9A Hardening Baseline `32584135135`](https://github.com/aulaHamidin/InventoryPos-Laravel12/actions/runs/32584135135) pada SHA final F10 hijau.
+- [x] P0: 0; P1: 0.
+- [x] Merge SHA F10 dicatat sebagai baseline F11.
 
 ## Rollback dan deployment
 

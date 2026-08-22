@@ -469,6 +469,8 @@ Contract decision: CD-9.1 untuk split F9A/F9B dan [`document-delta-f9a-rate-limi
 
 ## Fase 10 — Billing MRR & Admin Pusat *(Setelah F9A)*
 
+Status: **FASE 10 SELESAI — LOCAL/CI, DEPLOYMENT DITUNDA KE F9B**. Merge SHA F10 / baseline resmi F11: `9ba663a4c1d71a73b4c2182d96cd6dc90eb84868`.
+
 ### Deliverables
 - CD-10.1 dan [`implementation-plan-fase-10.md`](implementation-plan-fase-10.md) sebagai kontrak fase.
 - Billing schema, Legacy backfill, generated uniqueness, immutable plan, lifetime `trial_claims`, dan active-only MRR.
