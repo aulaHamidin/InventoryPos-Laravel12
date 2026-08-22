@@ -272,6 +272,8 @@ CD-9.2 mengunci rate limiter API (`login 5`, `read 300`, `mutation 120`, `export
 - CI utama hijau;
 - Fase 9 belum ditandai selesai.
 
+Status penutupan: **HARDENING PRE-DEPLOY SELESAI**. Merge SHA penutupan sekaligus baseline resmi F10: `3c9cf4295b42abac8a3128098f645ad39176eff4`.
+
 ### F9B — Setelah F12 Code-Complete
 
 - deployment pilot production-like dan non-public;

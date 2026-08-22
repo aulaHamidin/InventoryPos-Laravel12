@@ -417,6 +417,8 @@ Baseline keputusan CD-9.1: merge Fase 8 `98e1d8775265ab7e00e8cd29c2f7fd8148aabf9
 
 Baseline resmi implementasi F9A: merge pengesahan CD-9.1 pada `main`, SHA `ac6b7bf7ab630ba061b69a37a816804152b7695b`.
 
+F9A berstatus **HARDENING PRE-DEPLOY SELESAI**. Merge SHA penutupan sekaligus baseline resmi F10: `3c9cf4295b42abac8a3128098f645ad39176eff4`.
+
 Contract decisions: [`document-delta-f9-hardening-pilot-split.md`](document-delta-f9-hardening-pilot-split.md) (**CD-9.1**) dan [`document-delta-f9a-rate-limit-transport-hardening.md`](document-delta-f9a-rate-limit-transport-hardening.md) (**CD-9.2**).
 
 Implementation plan: [`implementation-plan-fase-9a.md`](implementation-plan-fase-9a.md) (**DISETUJUI UNTUK IMPLEMENTASI**).
@@ -438,14 +440,14 @@ F9A tidak boleh mengklaim backup terjadwal, restore production-like, RPO/RTO akt
 
 ### 9.3 Gate Keluar F9A
 
-- [ ] Load/concurrency dan profiling evidence lokal/CI lengkap.
-- [ ] Security review dan dependency audit selesai.
-- [ ] Browser/device matrix lokal selesai sesuai perangkat tersedia.
-- [ ] Draft runbook operasional lengkap.
-- [ ] Tidak ada P0 terbuka; setiap P1 memiliki mitigasi dan keputusan eksplisit.
-- [ ] Full quality gate dan CI remote hijau.
-- [ ] Acceptance record memberi status **HARDENING PRE-DEPLOY SELESAI**.
-- [ ] Fase 9 tetap belum dicentang selesai.
+- [x] Load/concurrency dan profiling evidence lokal/CI lengkap.
+- [x] Security review dan dependency audit selesai.
+- [x] Browser/device matrix lokal selesai sesuai perangkat tersedia.
+- [x] Draft runbook operasional lengkap.
+- [x] Tidak ada P0 terbuka; setiap P1 memiliki mitigasi dan keputusan eksplisit.
+- [x] Full quality gate dan CI remote hijau.
+- [x] Acceptance record memberi status **HARDENING PRE-DEPLOY SELESAI**.
+- [x] Fase 9 tetap belum dicentang selesai.
 
 ### 9.4 F9B — Deployment Pilot
 
@@ -743,7 +745,7 @@ Evidence tidak boleh memuat `.env`, secret, access token, OTP nyata, webhook sig
 - [x] Fase 7 — Analytics & Smart Threshold.
 - [x] Fase 8 — Staff & Multi-Kasir.
 - [ ] Fase 9 — Hardening Pre-Deploy & Pilot Split.
-  - [ ] F9A — Hardening Pre-Deploy.
+  - [x] F9A — Hardening Pre-Deploy.
   - [ ] F9B — Deployment Pilot.
 - [ ] Fase 10 — Billing MRR & Admin Pusat.
 - [ ] Fase 11 — Self-Service Onboarding & Automated Billing.
@@ -763,4 +765,4 @@ Evidence tidak boleh memuat `.env`, secret, access token, OTP nyata, webhook sig
 
 ## 16. Langkah Berikutnya
 
-CD-9.1 dan CD-9.2 telah disahkan; baseline resmi implementasi F9A adalah `ac6b7bf7ab630ba061b69a37a816804152b7695b`. Implementation plan F9A telah disetujui. Langkah berikutnya adalah menjalankan F9A — Hardening Pre-Deploy, menyimpan evidence lokal/CI, dan mempertahankan Fase 9 terbuka sampai F9B. Deployment production-like serta migration/backfill runtime tetap menjadi gate F9B/release v1.
+F9A berstatus **HARDENING PRE-DEPLOY SELESAI** dengan baseline resmi F10 `3c9cf4295b42abac8a3128098f645ad39176eff4`. Langkah berikutnya adalah menyusun dan mengesahkan CD-10.1 serta implementation plan F10 — Billing MRR & Admin Pusat. Fase 9 tetap terbuka; deployment production-like, migration/backfill runtime, backup/restore drill, dan acceptance operasional tetap menjadi gate F9B/release v1.
