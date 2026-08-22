@@ -6,7 +6,9 @@ Decision ID: **CD-9.1**
 
 Tanggal: 2026-08-22 (`Asia/Jakarta`)
 
-Baseline: merge Fase 8 `98e1d8775265ab7e00e8cd29c2f7fd8148aabf98`
+Baseline keputusan: merge Fase 8 `98e1d8775265ab7e00e8cd29c2f7fd8148aabf98`
+
+Merge pengesahan CD-9.1 / baseline resmi implementasi F9A: `ac6b7bf7ab630ba061b69a37a816804152b7695b`
 
 ## 1. Document Delta Declaration
 
@@ -56,7 +58,7 @@ Test F9A dijalankan melalui local Docker dan CI. Gate yang memerlukan environmen
 
 ## 2. Status dan Urutan Normatif
 
-- Baseline F9A adalah merge F8 `98e1d8775265ab7e00e8cd29c2f7fd8148aabf98`.
+- CD-9.1 disusun terhadap merge F8 `98e1d8775265ab7e00e8cd29c2f7fd8148aabf98`; implementasi F9A wajib menggunakan merge pengesahan CD-9.1 `ac6b7bf7ab630ba061b69a37a816804152b7695b` sebagai baseline resmi.
 - F9A yang lulus diberi status exact **HARDENING PRE-DEPLOY SELESAI**. Status ini bukan penyelesaian Fase 9.
 - Fase 10 hanya boleh dimulai setelah F9A lulus, tidak ada P0 terbuka, seluruh P1 memiliki mitigasi/keputusan eksplisit, dan CI utama hijau.
 - Fase 11 tetap bergantung pada Fase 10.

@@ -251,6 +251,8 @@ CD-8.1 mengunci: Owner-provisioned password, active/auth-version revocation, tra
 
 CD-9.1 mengunci F9A sebagai entry gate F10 dan menunda F9B sampai seluruh kode F0–F12 code-complete.
 
+Baseline resmi implementasi F9A: merge pengesahan CD-9.1 `ac6b7bf7ab630ba061b69a37a816804152b7695b`.
+
 ### F9A — Hardening Pre-Deploy
 
 - load/concurrency test lokal/CI;

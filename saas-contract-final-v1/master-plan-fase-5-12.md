@@ -413,7 +413,9 @@ CD-8.1 disahkan pada baseline `ad07521fbdf81ccf5a3fe9185fecac5eb96fa01e`: Owner-
 
 ## 9. Fase 9 — Hardening Pre-Deploy & Pilot Split
 
-Baseline resmi F9A: merge Fase 8 pada `main`, SHA `98e1d8775265ab7e00e8cd29c2f7fd8148aabf98`.
+Baseline keputusan CD-9.1: merge Fase 8 `98e1d8775265ab7e00e8cd29c2f7fd8148aabf98`.
+
+Baseline resmi implementasi F9A: merge pengesahan CD-9.1 pada `main`, SHA `ac6b7bf7ab630ba061b69a37a816804152b7695b`.
 
 Contract decision: [`document-delta-f9-hardening-pilot-split.md`](document-delta-f9-hardening-pilot-split.md) (**CD-9.1**).
 
@@ -758,4 +760,4 @@ Evidence tidak boleh memuat `.env`, secret, access token, OTP nyata, webhook sig
 
 ## 16. Langkah Berikutnya
 
-CD-9.1 telah mengunci split F9A/F9B pada baseline merge F8 `98e1d8775265ab7e00e8cd29c2f7fd8148aabf98`. Langkah berikutnya adalah menyusun serta mengesahkan implementation plan F9A — Hardening Pre-Deploy sebelum implementasinya dimulai. Deployment production-like ditunda sampai seluruh kode F0–F12 code-complete; migration/backfill F7/F8 tetap wajib pada F9B dan gate release v1.
+CD-9.1 telah di-merge ke `main`; baseline resmi implementasi F9A adalah `ac6b7bf7ab630ba061b69a37a816804152b7695b`. Langkah berikutnya adalah menyusun serta mengesahkan implementation plan F9A — Hardening Pre-Deploy sebelum implementasinya dimulai. Deployment production-like ditunda sampai seluruh kode F0–F12 code-complete; migration/backfill F7/F8 tetap wajib pada F9B dan gate release v1.

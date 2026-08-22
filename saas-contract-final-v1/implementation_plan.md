@@ -447,6 +447,8 @@ new_avg = ((old_stock × old_avg) + (in_qty × in_cost)) / (old_stock + in_qty)
 
 ## Fase 9 — Hardening Pre-Deploy & Pilot Split
 
+Baseline resmi implementasi F9A: merge pengesahan CD-9.1 `ac6b7bf7ab630ba061b69a37a816804152b7695b`.
+
 ### F9A Deliverables
 - Load/concurrency tests: login/session, item search, POS/payment/idempotency, stock race, queue, dan Redis revocation
 - Security review, dependency audit, query/queue profiling, serta browser/device matrix lokal

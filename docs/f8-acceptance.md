@@ -7,7 +7,7 @@ Penutupan CI: 2026-08-22 (`Asia/Jakarta`)
 ## Baseline dan kontrak
 
 - Baseline Fase 7: `ad07521fbdf81ccf5a3fe9185fecac5eb96fa01e` pada `main`.
-- Merge Fase 8 ke `main`: `98e1d8775265ab7e00e8cd29c2f7fd8148aabf98`; SHA ini menjadi baseline resmi Fase 9.
+- Merge Fase 8 ke `main`: `98e1d8775265ab7e00e8cd29c2f7fd8148aabf98`; SHA ini menjadi baseline keputusan CD-9.1. Setelah CD-9.1 disahkan, baseline resmi implementasi F9A berpindah ke merge `ac6b7bf7ab630ba061b69a37a816804152b7695b`.
 - Document Delta: `saas-contract-final-v1/document-delta-f8-staff-multi-cashier.md`.
 - Implementation plan: `saas-contract-final-v1/implementation-plan-fase-8.md` dengan status **DISETUJUI UNTUK IMPLEMENTASI**.
 - Commit kontrak F8: `0550bc1`.
