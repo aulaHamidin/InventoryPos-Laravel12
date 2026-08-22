@@ -108,6 +108,8 @@ Jika valid:
 
 Owner dan Staff aktif dapat login. User nonaktif, tenant non-operable, email salah, dan password salah menggunakan pesan credential generik yang sama. Deactivate/reset mencabut seluruh token lama.
 
+Login dibatasi 5 request per menit per kombinasi hash email ternormalisasi dan IP. Seluruh kondisi login yang dibatasi memakai response `429 RATE_LIMITED` yang sama dan tidak boleh membocorkan apakah akun tersedia.
+
 ### `POST /auth/2fa/verify`
 
 ---
@@ -665,6 +667,7 @@ Minimum:
 - `TRIAL_ALREADY_CONSUMED`
 - `SUBSCRIPTION_NOT_ACTIVE`
 - `DELETION_REQUEST_EXISTS`
+- `RATE_LIMITED`
 
 ---
 
@@ -686,6 +689,35 @@ Breaking:
 - incompatible status semantics.
 
 Deprecation uses `Sunset` header and documented migration period.
+
+---
+
+## 16. Rate Limit dan Transport Security
+
+CD-9.2 mengunci bucket berikut:
+
+- login: 5 request/menit per hash email + IP;
+- authenticated read: 300 request/menit per tenant + User;
+- authenticated mutation: 120 request/menit per tenant + User;
+- pembuatan export: 10 request/menit per tenant + User;
+- logout tidak dibatasi.
+
+Tenant/User limiter key selalu berasal dari authenticated identity. Runtime multi-process memakai Redis atau distributed atomic cache yang disetujui.
+
+Rate limited response menggunakan status `429`:
+
+```json
+{
+  "status": "error",
+  "message": "Terlalu banyak permintaan. Coba lagi nanti.",
+  "error_code": "RATE_LIMITED",
+  "errors": []
+}
+```
+
+Response wajib memuat `Retry-After`, `X-RateLimit-Limit`, dan `X-RateLimit-Remaining`. Throttled request menghasilkan zero mutation, zero audit, zero event, dan zero queued job.
+
+Cross-origin browser access bersifat deny-by-default dengan allowlist eksplisit dan tanpa credentialed wildcard. Auth response serta private download memakai `Cache-Control: no-store, private`; private file tidak tersedia sebagai public asset. Security header minimum dan HSTS production/HTTPS-only mengikuti CD-9.2.
 
 
 Canonical lifecycle rules:

@@ -710,3 +710,27 @@ Authorization harus melalui Policy/permission gate.
 - restore verification.
 - billing webhook endpoint monitoring setelah Fase 11.
 - application error monitoring.
+
+---
+
+## 20. F9A Security Runtime
+
+CD-9.2 menambahkan empat named rate limiter pada boundary HTTP:
+
+```text
+request
+  -> login limiter (unauthenticated, email hash + IP)
+  -> authentication / tenant context
+  -> read | mutation | export limiter (tenant + User)
+  -> Policy / Ownership Guard
+  -> Controller
+  -> Action
+```
+
+Limiter berjalan sebelum controller/Action sehingga `429` tidak dapat menghasilkan mutation, audit, event, atau job. Logout dikecualikan agar token/session revocation selalu dapat dilakukan. Redis menjadi backing store runtime multi-process; array/file hanya boleh dipakai pada unit test single-process.
+
+Security-header middleware berlaku pada web, API, dan private download. HSTS hanya aktif pada production HTTPS. CORS browser deny-by-default dan membuka origin eksplisit tanpa wildcard credential. Private response memakai `no-store`, private disk tidak dilayani langsung, dan PHP version disclosure wajib nonaktif pada hardening/deployment runtime.
+
+`SensitiveDataRedactor` menjadi boundary bersama sebelum metadata ditulis oleh audit atau structured logger. Redaction recursive mempertahankan key/shape dan mengganti value credential/token/cookie/OTP/signature dengan `[REDACTED]`; kegagalan redaction tidak boleh menggagalkan business transaction.
+
+F9A hanya membuktikan behavior tersebut melalui local Docker dan CI. Health deployment, backup/restore, RPO/RTO, serta alert delivery tetap menjadi F9B.

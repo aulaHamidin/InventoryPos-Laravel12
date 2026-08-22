@@ -253,6 +253,8 @@ CD-9.1 mengunci F9A sebagai entry gate F10 dan menunda F9B sampai seluruh kode F
 
 Baseline resmi implementasi F9A: merge pengesahan CD-9.1 `ac6b7bf7ab630ba061b69a37a816804152b7695b`.
 
+CD-9.2 mengunci rate limiter API (`login 5`, `read 300`, `mutation 120`, `export 10` per menit), canonical `429 RATE_LIMITED`, Redis atomic runtime, CORS/security headers, private response, dan sensitive metadata redaction tanpa migration atau endpoint baru.
+
 ### F9A — Hardening Pre-Deploy
 
 - load/concurrency test lokal/CI;
@@ -260,6 +262,7 @@ Baseline resmi implementasi F9A: merge pengesahan CD-9.1 `ac6b7bf7ab630ba061b69a
 - query/queue profiling;
 - browser/device matrix lokal;
 - draft deployment, rollback, incident, backup, restore, dan support runbook.
+- implementation plan khusus: [`implementation-plan-fase-9a.md`](implementation-plan-fase-9a.md).
 
 ### F9A acceptance
 
