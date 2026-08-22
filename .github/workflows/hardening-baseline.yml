@@ -109,4 +109,3 @@ jobs:
             storage/logs/f9a-baseline-server.log
             storage/logs/f9a-worker-*.log
           retention-days: 14
-

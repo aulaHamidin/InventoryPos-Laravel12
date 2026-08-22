@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "dataset_items": [200, 2000],
+  "max_queries": {
+    "item_index": 3,
+    "item_search": 3,
+    "item_scan": 2,
+    "checkout": 11,
+    "payment": 19,
+    "analytics": 1,
+    "low_stock_widget": 1,
+    "analytics_class_widget": 2,
+    "analytics_operational_widget": 1,
+    "shopping_recommendation_widget": 1,
+    "payment_method_widget": 1
+  }
+}

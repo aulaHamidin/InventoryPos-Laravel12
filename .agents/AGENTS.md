@@ -167,6 +167,18 @@ Payment:
 - Impersonation wajib reason + expiry + banner + audit.
 - Super Admin tidak boleh direct-edit stock.
 
+### Rate Limit & Transport Hardening (CD-9.2)
+
+- API login dibatasi 5 request/menit per hash email ternormalisasi + IP.
+- Authenticated read dibatasi 300 request/menit, mutation 120 request/menit, dan create export 10 request/menit per tenant + User.
+- Logout tidak dibatasi; limiter tenant-scoped tidak pernah mengambil `tenant_id` dari request.
+- `429 RATE_LIMITED` wajib canonical, menyertakan retry/rate headers, dan menghasilkan zero mutation/audit/event/job.
+- Runtime multi-process wajib memakai Redis/distributed atomic cache untuk limiter.
+- CORS browser deny-by-default; wildcard credential dilarang.
+- Security headers berlaku pada web/API/private download; HSTS hanya production HTTPS.
+- Auth/private response `no-store`; private file tidak boleh dilayani langsung.
+- Audit/log metadata wajib melalui recursive sensitive-value redaction tanpa menggagalkan business transaction.
+
 ### Urutan Gate v1 (CD-9.1)
 
 - Urutan normatif setelah F8 adalah `F9A → F10 → F11 → F12 code-complete → deployment pilot → F9B + F12 runtime acceptance → Public v1`.

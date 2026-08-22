@@ -417,7 +417,9 @@ Baseline keputusan CD-9.1: merge Fase 8 `98e1d8775265ab7e00e8cd29c2f7fd8148aabf9
 
 Baseline resmi implementasi F9A: merge pengesahan CD-9.1 pada `main`, SHA `ac6b7bf7ab630ba061b69a37a816804152b7695b`.
 
-Contract decision: [`document-delta-f9-hardening-pilot-split.md`](document-delta-f9-hardening-pilot-split.md) (**CD-9.1**).
+Contract decisions: [`document-delta-f9-hardening-pilot-split.md`](document-delta-f9-hardening-pilot-split.md) (**CD-9.1**) dan [`document-delta-f9a-rate-limit-transport-hardening.md`](document-delta-f9a-rate-limit-transport-hardening.md) (**CD-9.2**).
+
+Implementation plan: [`implementation-plan-fase-9a.md`](implementation-plan-fase-9a.md) (**DISETUJUI UNTUK IMPLEMENTASI**).
 
 ### 9.1 Sasaran
 
@@ -427,6 +429,7 @@ Memisahkan hardening yang dapat dibuktikan lokal/CI dari deployment pilot. F9A m
 
 - Script load/concurrency versioned untuk login/session, item search/scan, POS checkout/payment/idempotency, stock race, queue, dan Redis session revocation.
 - Security review tenant isolation, ownership, authorization, mass assignment, CSRF/session, private download, secret/log redaction, dan dependency audit.
+- Redis-backed API rate limiter, canonical `429`, CORS/security headers, private response, dan redaction sesuai CD-9.2.
 - Profiling query/queue mencatat environment serta batas test dan tidak membuat klaim angka tanpa baseline.
 - Browser/device matrix lokal mencakup desktop Chromium/Firefox, mobile Chromium, tablet, scanner keyboard-wedge, dan printer fallback; Safari/iOS bila perangkat tersedia.
 - Draft runbook deployment, rollback, incident, backup, restore, dan support.
@@ -760,4 +763,4 @@ Evidence tidak boleh memuat `.env`, secret, access token, OTP nyata, webhook sig
 
 ## 16. Langkah Berikutnya
 
-CD-9.1 telah di-merge ke `main`; baseline resmi implementasi F9A adalah `ac6b7bf7ab630ba061b69a37a816804152b7695b`. Langkah berikutnya adalah menyusun serta mengesahkan implementation plan F9A — Hardening Pre-Deploy sebelum implementasinya dimulai. Deployment production-like ditunda sampai seluruh kode F0–F12 code-complete; migration/backfill F7/F8 tetap wajib pada F9B dan gate release v1.
+CD-9.1 dan CD-9.2 telah disahkan; baseline resmi implementasi F9A adalah `ac6b7bf7ab630ba061b69a37a816804152b7695b`. Implementation plan F9A telah disetujui. Langkah berikutnya adalah menjalankan F9A — Hardening Pre-Deploy, menyimpan evidence lokal/CI, dan mempertahankan Fase 9 terbuka sampai F9B. Deployment production-like serta migration/backfill runtime tetap menjadi gate F9B/release v1.
