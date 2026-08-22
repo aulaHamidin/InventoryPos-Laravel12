@@ -520,16 +520,25 @@ jobs:
       - run: npx playwright install --with-deps chromium firefox
       - run: php artisan migrate:fresh --force
       - run: php artisan hardening:seed --profile=smoke
-      - name: Start isolated browser server
+      - name: Run isolated browser matrix
         run: |
           PHP_CLI_SERVER_WORKERS=4 php -d expose_php=0 artisan serve --host=127.0.0.1 --port=8000 --no-reload > storage/logs/f9a-browser-server.log 2>&1 &
+          server_pid=$!
           php artisan queue:work redis --queue=analytics,default --sleep=0 --tries=3 --timeout=120 > storage/logs/f9a-browser-worker.log 2>&1 &
+          worker_pid=$!
+          cleanup() {
+            kill "$server_pid" "$worker_pid" 2>/dev/null || true
+            wait "$server_pid" "$worker_pid" 2>/dev/null || true
+          }
+          trap cleanup EXIT
           for attempt in {1..30}; do
-            curl --fail --silent http://127.0.0.1:8000/up >/dev/null && exit 0
+            if curl --fail --silent http://127.0.0.1:8000/up >/dev/null; then
+              npm run test:e2e:ci
+              exit $?
+            fi
             sleep 1
           done
           exit 1
-      - run: npm run test:e2e:ci
       - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
         if: ${{ !cancelled() }}
         with:
