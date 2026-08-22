@@ -15,7 +15,7 @@ Hasil lokal 2026-08-22:
 
 - Composer advisory: 0 advisory.
 - npm audit: 0 critical/high/moderate/low vulnerability.
-- Gitleaks history: 20 commit, sekitar 4,16 MB, 0 leak.
+- Gitleaks history hingga local acceptance commit `be78525`: 22 commit, sekitar 4,31 MB, 0 leak.
 - Gitleaks current tracked/untracked source tree (ignored runtime secret dikecualikan): sekitar 4,01 MB, 0 leak pada final source snapshot lokal.
 
 Gitleaks memakai image `v8.29.0` yang dipin digest. Artifact dilarang memuat manifest hardening, `.env`, token, cookie, OTP, signature, atau QRIS produksi.
