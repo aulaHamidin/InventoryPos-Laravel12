@@ -2,11 +2,21 @@ import { expect, test } from '@playwright/test';
 import { adminStatePath, ownerStatePath } from './support.js';
 
 async function closeMobileSidebarIfOpen(page) {
-  const closeButton = page.locator('.fi-topbar-close-sidebar-btn');
+  const overlay = page.locator('.fi-sidebar-close-overlay');
 
-  if (await closeButton.isVisible()) {
-    await closeButton.click();
-    await expect(closeButton).toBeHidden();
+  if (await overlay.isVisible()) {
+    const bounds = await overlay.boundingBox();
+    if (!bounds) {
+      throw new Error('Overlay sidebar terlihat tetapi tidak memiliki bounding box.');
+    }
+
+    await overlay.click({
+      position: {
+        x: bounds.width - 8,
+        y: Math.round(bounds.height / 2),
+      },
+    });
+    await expect(overlay).toBeHidden();
   }
 }
 
