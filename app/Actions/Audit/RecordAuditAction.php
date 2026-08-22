@@ -6,10 +6,13 @@ use App\Models\AuditLog;
 use App\Models\User;
 use App\Services\TenantContext;
 use App\Support\AuditContext;
+use App\Support\SensitiveDataRedactor;
 use Illuminate\Database\Eloquent\Model;
 
 class RecordAuditAction
 {
+    public function __construct(private readonly SensitiveDataRedactor $redactor) {}
+
     public function execute(
         string $action,
         ?User $actor = null,
@@ -25,11 +28,13 @@ class RecordAuditAction
             'action' => $action,
             'subject_type' => $subject instanceof Model ? $subject::class : $subject,
             'subject_id' => $subject instanceof Model ? $subject->getKey() : null,
-            'old_values' => $oldValues,
-            'new_values' => $newValues,
+            'old_values' => $this->redactor->redact($oldValues),
+            'new_values' => $this->redactor->redact($newValues),
             'ip_address' => $context?->ipAddress,
-            'user_agent' => $context?->userAgent,
-            'metadata' => array_merge($context?->metadata ?? [], $metadata ?? []),
+            'user_agent' => $context?->userAgent !== null
+                ? $this->redactor->redactText($context->userAgent)
+                : null,
+            'metadata' => $this->redactor->redact(array_merge($context?->metadata ?? [], $metadata ?? [])),
         ]);
         $log->tenant_id = TenantContext::hasTenant() ? TenantContext::id() : $actor?->tenant_id;
         $log->save();

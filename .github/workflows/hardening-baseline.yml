@@ -1,0 +1,111 @@
+name: F9A Hardening Baseline
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  hardening-baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      mysql:
+        image: mysql:8.4@sha256:b3b90af2a6552ae30c266fdb7d5dd55f3afb72404bb78d37fe8a23eb857fd3fb
+        env:
+          MYSQL_ROOT_PASSWORD: password
+          MYSQL_DATABASE: testing_hardening_baseline
+          MYSQL_USER: sail
+          MYSQL_PASSWORD: password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -ppassword"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+      redis:
+        image: redis:alpine@sha256:978f0e01593e65eed801f2402944efcd936d43b5027e4908a7897baf88ed6241
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      APP_ENV: testing
+      APP_URL: http://127.0.0.1:8000
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: testing_hardening_baseline
+      DB_USERNAME: sail
+      DB_PASSWORD: password
+      BCRYPT_ROUNDS: 4
+      CACHE_STORE: redis
+      CACHE_PREFIX: f9a-baseline-${{ github.run_id }}-${{ github.run_attempt }}-
+      REDIS_PREFIX: f9a-baseline-${{ github.run_id }}-${{ github.run_attempt }}-
+      QUEUE_CONNECTION: redis
+      SESSION_DRIVER: redis
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: 6379
+      HARDENING_RUNTIME_TESTS: 'true'
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: shivammathur/setup-php@44454db4f0199b8b9685a5d763dc37cbf79108e1 # 2.36.0
+        with:
+          php-version: '8.3'
+          extensions: bcmath, dom, fileinfo, intl, mbstring, mysql, redis, zip
+          ini-values: expose_php=Off
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist
+      - name: Generate ephemeral application key
+        run: echo "APP_KEY=base64:$(openssl rand -base64 32)" >> "$GITHUB_ENV"
+      - run: php artisan migrate:fresh --force
+      - run: php artisan hardening:seed --profile=baseline
+      - run: php artisan test tests/Integration/Phase9RedisRateLimitTest.php
+      - name: Start application and three queue workers
+        run: |
+          PHP_CLI_SERVER_WORKERS=4 php -d expose_php=0 artisan serve --host=127.0.0.1 --port=8000 --no-reload > storage/logs/f9a-baseline-server.log 2>&1 &
+          for worker in 1 2 3; do
+            php artisan queue:work redis --queue=exports,analytics,default --sleep=0 --tries=3 --timeout=120 > "storage/logs/f9a-worker-${worker}.log" 2>&1 &
+          done
+          for attempt in {1..30}; do
+            curl --fail --silent http://127.0.0.1:8000/up >/dev/null && exit 0
+            sleep 1
+          done
+          exit 1
+      - name: Run full k6 baseline
+        run: |
+          docker run --rm --network host --user "$(id -u):$(id -g)" -v "$PWD:/work" -w /work \
+            grafana/k6:2.1.0@sha256:65c920dc067d5e2e00befbf982af6ad6ad0117034e8b1c65817c7975c52d4669 run \
+            -e F9A_PROFILE=baseline \
+            -e BASE_URL=http://127.0.0.1:8000 \
+            -e F9A_API_BASE_URL=http://localhost:8000 \
+            -e F9A_MANIFEST=/work/storage/framework/testing/f9a-hardening-manifest.json \
+            -e K6_SUMMARY_PATH=/work/storage/framework/testing/f9a-k6-baseline-summary.json \
+            tests/Load/f9a-hardening.js
+      - name: Run isolated idempotency and expected-conflict profile
+        run: |
+          docker run --rm --network host --user "$(id -u):$(id -g)" -v "$PWD:/work" -w /work \
+            grafana/k6:2.1.0@sha256:65c920dc067d5e2e00befbf982af6ad6ad0117034e8b1c65817c7975c52d4669 run \
+            -e BASE_URL=http://127.0.0.1:8000 \
+            -e F9A_MANIFEST=/work/storage/framework/testing/f9a-hardening-manifest.json \
+            -e K6_CONFLICT_SUMMARY_PATH=/work/storage/framework/testing/f9a-k6-conflicts-summary.json \
+            tests/Load/f9a-conflicts.js
+      - run: php artisan hardening:reconcile --output=storage/framework/testing/f9a-baseline-reconciliation.json
+      - run: php artisan hardening:profile-queue --output=storage/framework/testing/f9a-queue-profile.json --timeout=300
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        if: ${{ !cancelled() }}
+        with:
+          name: f9a-hardening-baseline-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            storage/framework/testing/f9a-k6-baseline-summary.json
+            storage/framework/testing/f9a-k6-conflicts-summary.json
+            storage/framework/testing/f9a-baseline-reconciliation.json
+            storage/framework/testing/f9a-queue-profile.json
+            storage/logs/f9a-baseline-server.log
+            storage/logs/f9a-worker-*.log
+          retention-days: 14

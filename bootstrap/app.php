@@ -1,12 +1,14 @@
 <?php
 
 use App\Exceptions\ApiProblemException;
+use App\Http\Middleware\AddSecurityHeaders;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful;
@@ -20,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->append(AddSecurityHeaders::class);
         $middleware->api(prepend: [
             EnsureFrontendRequestsAreStateful::class,
         ]);
@@ -39,6 +42,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->render(fn (AuthenticationException $e, Request $request) => $request->is('api/*') ? $json('Unauthenticated.', 'UNAUTHENTICATED', [], 401) : null);
         $exceptions->render(fn (AuthorizationException $e, Request $request) => $request->is('api/*') ? $json('Forbidden.', 'FORBIDDEN', [], 403) : null);
         $exceptions->render(fn (ModelNotFoundException $e, Request $request) => $request->is('api/*') ? $json('Resource tidak ditemukan.', 'NOT_FOUND', [], 404) : null);
+        $exceptions->render(fn (HttpResponseException $e, Request $request) => $request->is('api/*') ? $e->getResponse() : null);
         $exceptions->render(function (HttpExceptionInterface $e, Request $request) use ($json) {
             if (! $request->is('api/*')) {
                 return null;

@@ -1,0 +1,16 @@
+{
+    "database": "inventori_q_hardening",
+    "redis_prefix": "f9a-hardening-final-",
+    "started_at": "2026-08-22T10:15:40+00:00",
+    "finished_at": "2026-08-22T10:16:01+00:00",
+    "duration_seconds": 21.209076,
+    "analytics_jobs": 500,
+    "export_jobs": 5,
+    "analytics_queue_depth": 0,
+    "export_queue_depth": 0,
+    "completed_exports": 5,
+    "missing_export_files": 0,
+    "cross_tenant_outputs": 0,
+    "failed_jobs": 0,
+    "passed": true
+}
