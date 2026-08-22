@@ -10,7 +10,8 @@ Baseline resmi: `ac6b7bf7ab630ba061b69a37a816804152b7695b`
 - CD-9.2 mengunci rate limit dan transport hardening tanpa endpoint/migration baru.
 - Implementation plan F9A berstatus **DISETUJUI UNTUK IMPLEMENTASI**.
 - Commit dokumentasi awal: `fdd89b4`.
-- SHA implementasi, merge SHA/baseline F10, dan remote CI run diisi setelah penutupan.
+- SHA implementasi lokal: `bffa93db15f1dd838ee7ac693767a3d97d996bf6`.
+- Merge SHA/baseline F10 dan remote CI run tetap diisi setelah penutupan.
 
 ## Gate sementara
 
