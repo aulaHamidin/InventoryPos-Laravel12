@@ -6,6 +6,7 @@ use App\Actions\Reports\QueueReportExportAction;
 use App\Filament\Resources\StockMovementResource\Pages;
 use App\Models\Item;
 use App\Models\StockMovement;
+use App\Services\ImpersonationContext;
 use App\Support\AuditContext;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -99,6 +100,11 @@ class StockMovementResource extends Resource
     public static function getRelations(): array
     {
         return [];
+    }
+
+    public static function canViewAny(): bool
+    {
+        return ! ImpersonationContext::isSupport() && parent::canViewAny();
     }
 
     public static function getPages(): array

@@ -2,11 +2,13 @@
 
 use App\Enums\AdminRole;
 use App\Enums\UserRole;
+use App\Http\Middleware\EnsureAdminAccess;
 use App\Models\Admin;
 use App\Models\AuditLog;
 use App\Services\TenantContext;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
+use PragmaRX\Google2FA\Google2FA;
 
 it('isolates Filament records and gives Staff a read only operational panel', function () {
     [$tenantA, $ownerA] = makeTenantUser();
@@ -59,19 +61,29 @@ it('loads the dedicated Filament theme instead of the Tailwind application entry
 
 it('separates platform Admin and tenant User panels', function () {
     [, $owner] = makeTenantUser();
-    $admin = Admin::create([
+    $admin = new Admin([
         'name' => 'Platform Admin',
         'email' => 'platform-admin@example.test',
         'password' => 'very-secret-password',
-        'role' => AdminRole::SuperAdmin,
     ]);
+    $admin->forceFill(['role' => AdminRole::SuperAdmin, 'is_active' => true, 'auth_version' => 1])->save();
 
     $this->actingAs($owner)->get('/app')->assertOk();
     $this->actingAs($owner)->get('/admin')->assertRedirect('/admin/login');
 
     auth('web')->logout();
     TenantContext::clear();
-    $this->actingAs($admin, 'admin')->get('/admin')->assertOk();
+    $this->actingAs($admin, 'admin')->withSession([
+        EnsureAdminAccess::VERSION_KEY => 1,
+    ])->get('/admin')->assertRedirect(route('admin.mfa.setup'));
+    $admin->forceFill([
+        'two_factor_secret' => app(Google2FA::class)->generateSecretKey(32),
+        'two_factor_confirmed_at' => now(),
+    ])->save();
+    $this->actingAs($admin->fresh(), 'admin')->withSession([
+        EnsureAdminAccess::VERSION_KEY => 1,
+        EnsureAdminAccess::MFA_KEY => true,
+    ])->get('/admin')->assertOk();
     $this->actingAs($admin, 'admin')->get('/app')->assertRedirect('/app/login');
     $this->actingAs($admin, 'admin')->get('/admin/items')->assertNotFound();
 });

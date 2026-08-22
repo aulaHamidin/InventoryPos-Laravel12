@@ -2,9 +2,11 @@
 
 namespace App\Policies;
 
+use App\Enums\SubscriptionCapability;
 use App\Enums\UserRole;
 use App\Models\Supplier;
 use App\Models\User;
+use App\Support\SubscriptionCapabilityService;
 use Illuminate\Database\Eloquent\Model;
 
 class SupplierPolicy extends TenantOwnerPolicy
@@ -22,11 +24,12 @@ class SupplierPolicy extends TenantOwnerPolicy
 
     public function delete(User $user, Model $model): bool
     {
-        return $model instanceof Supplier && $this->owns($user, $model) && ! $model->itemSupplierLinks()->exists();
+        return $model instanceof Supplier && $this->owns($user, $model, SubscriptionCapability::Configure) && ! $model->itemSupplierLinks()->exists();
     }
 
     private function activeStaff(User $user): bool
     {
-        return $user->role === UserRole::Staff && $user->is_active && $user->tenant?->canOperate() === true;
+        return $user->role === UserRole::Staff && $user->is_active && $user->tenant?->canOperate() === true
+            && app(SubscriptionCapabilityService::class)->allows($user, SubscriptionCapability::Read);
     }
 }

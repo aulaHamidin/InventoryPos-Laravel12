@@ -3,8 +3,13 @@
 namespace App\Console\Commands;
 
 use App\Actions\Pos\CheckoutPosAction;
+use App\Enums\AdminRole;
+use App\Enums\SubscriptionStatus;
 use App\Enums\UserRole;
+use App\Models\Admin;
 use App\Models\Category;
+use App\Models\Plan;
+use App\Models\Subscription;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\TenantContext;
@@ -14,6 +19,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
+use PragmaRX\Google2FA\Google2FA;
 use Throwable;
 
 class SeedHardeningFixture extends Command
@@ -24,7 +30,7 @@ class SeedHardeningFixture extends Command
 
     protected $description = 'Seed deterministic synthetic F9A data on an isolated hardening database';
 
-    public function handle(HardeningEnvironment $environment, CheckoutPosAction $checkout): int
+    public function handle(HardeningEnvironment $environment, CheckoutPosAction $checkout, Google2FA $google2fa): int
     {
         try {
             $database = $environment->assertSafe();
@@ -57,6 +63,25 @@ class SeedHardeningFixture extends Command
             return self::FAILURE;
         }
 
+        $adminSecret = $google2fa->generateSecretKey(32);
+        $admin = new Admin([
+            'name' => 'F10 Synthetic Super Admin',
+            'email' => 'f10-super-admin@example.test',
+            'password' => $password,
+        ]);
+        $admin->forceFill([
+            'role' => AdminRole::SuperAdmin,
+            'is_active' => true,
+            'auth_version' => 1,
+            'two_factor_secret' => $adminSecret,
+            'two_factor_confirmed_at' => null,
+        ])->save();
+        $manifest['platform_admin'] = [
+            'email' => $admin->email,
+            'password' => $password,
+            'totp_secret' => $adminSecret,
+        ];
+
         try {
             foreach (range(1, $tenantCount) as $tenantNumber) {
                 $manifest['tenants'][] = DB::transaction(function () use (
@@ -72,6 +97,14 @@ class SeedHardeningFixture extends Command
                         'slug' => sprintf('f9a-hardening-%02d', $tenantNumber),
                         'allow_negative_stock' => false,
                         'dead_stock_days' => 90,
+                    ]);
+                    $legacy = Plan::query()->where('code', 'LEGACY-F0-F9')->firstOrFail();
+                    Subscription::query()->create([
+                        'tenant_id' => $tenant->getKey(),
+                        'plan_id' => $legacy->getKey(),
+                        'status' => SubscriptionStatus::Active,
+                        'starts_at' => $tenant->created_at,
+                        'ends_at' => '9999-12-31 16:59:59',
                     ]);
 
                     return TenantContext::run($tenant, function () use (

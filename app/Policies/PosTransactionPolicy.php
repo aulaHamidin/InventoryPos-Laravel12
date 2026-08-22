@@ -2,8 +2,10 @@
 
 namespace App\Policies;
 
+use App\Enums\SubscriptionCapability;
 use App\Enums\UserRole;
 use App\Models\User;
+use App\Support\SubscriptionCapabilityService;
 use Illuminate\Database\Eloquent\Model;
 
 class PosTransactionPolicy extends TenantOwnerPolicy
@@ -31,24 +33,25 @@ class PosTransactionPolicy extends TenantOwnerPolicy
 
     public function void(User $user, Model $model): bool
     {
-        return $this->owns($user, $model);
+        return $this->owns($user, $model, SubscriptionCapability::Operate);
     }
 
     public function return(User $user, Model $model): bool
     {
-        return $this->owns($user, $model);
+        return $this->owns($user, $model, SubscriptionCapability::Operate);
     }
 
     public function update(User $user, Model $model): bool
     {
-        return $this->owns($user, $model);
+        return $this->owns($user, $model, SubscriptionCapability::Operate);
     }
 
     private function operator(User $user): bool
     {
         return $user->is_active
             && in_array($user->role, [UserRole::Owner, UserRole::Staff], true)
-            && $user->tenant?->canOperate() === true;
+            && $user->tenant?->canOperate() === true
+            && app(SubscriptionCapabilityService::class)->allows($user, SubscriptionCapability::Operate);
     }
 
     private function staffOwns(User $user, Model $model): bool

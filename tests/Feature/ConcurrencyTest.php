@@ -25,6 +25,9 @@ function concurrencyFixture(bool $withTransaction = false): array
     $pdo->prepare('INSERT INTO tenants (nama_toko, slug, operational_status, allow_negative_stock, dead_stock_days, created_at, updated_at) VALUES (?, ?, ?, 0, 90, ?, ?)')
         ->execute(["Concurrency {$suffix}", "concurrency-{$suffix}", 'active', $now, $now]);
     $tenantId = (int) $pdo->lastInsertId();
+    $legacyPlanId = (int) $pdo->query("SELECT id FROM plans WHERE code = 'LEGACY-F0-F9' LIMIT 1")->fetchColumn();
+    $pdo->prepare('INSERT INTO subscriptions (tenant_id, plan_id, status, starts_at, ends_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+        ->execute([$tenantId, $legacyPlanId, 'active', $now, '9999-12-31 16:59:59', $now, $now]);
 
     $pdo->prepare('INSERT INTO users (tenant_id, name, email, no_hp, password, role, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
         ->execute([$tenantId, 'Concurrency Owner', "{$suffix}@test.local", '08'.random_int(1000000000, 9999999999), 'hash', 'owner', $now, $now]);
@@ -114,6 +117,30 @@ function opnameConcurrencyFixture(bool $counted = false): array
     return array_merge($fixture, compact('rackId', 'opnameId'));
 }
 
+function billingConcurrencyFixture(): array
+{
+    $fixture = concurrencyFixture();
+    $pdo = $fixture['pdo'];
+    $pdo->prepare('DELETE FROM subscriptions WHERE tenant_id = ?')->execute([$fixture['tenantId']]);
+    $pdo->prepare('INSERT INTO admins (name, email, password, role, is_active, auth_version, created_at, updated_at) VALUES (?, ?, ?, ?, 1, 1, ?, ?)')
+        ->execute(['Concurrency Billing Admin', "billing-{$fixture['suffix']}@test.local", 'hash', 'super_admin', $fixture['now'], $fixture['now']]);
+    $adminId = (int) $pdo->lastInsertId();
+    $pdo->prepare('INSERT INTO plans (code, name, billing_interval, price, is_trial, trial_days, is_active, is_internal, created_at, updated_at) VALUES (?, ?, ?, ?, 0, NULL, 1, 0, ?, ?)')
+        ->execute(["BILLING-{$fixture['suffix']}", 'Concurrency Plan', 'monthly', '180000.00', $fixture['now'], $fixture['now']]);
+    $planId = (int) $pdo->lastInsertId();
+    $pdo->prepare('INSERT INTO subscriptions (tenant_id, plan_id, status, starts_at, ends_at, created_at, updated_at) VALUES (?, ?, ?, DATE_SUB(UTC_TIMESTAMP(), INTERVAL 40 DAY), DATE_SUB(UTC_TIMESTAMP(), INTERVAL 8 DAY), ?, ?)')
+        ->execute([$fixture['tenantId'], $planId, 'past_due', $fixture['now'], $fixture['now']]);
+    $subscriptionId = (int) $pdo->lastInsertId();
+    $pdo->prepare('INSERT INTO invoices (tenant_id, subscription_id, target_plan_id, invoice_number, amount, due_at, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, UTC_TIMESTAMP(), ?, ?, ?)')
+        ->execute([$fixture['tenantId'], $subscriptionId, $planId, "INV-CONCURRENT-{$fixture['suffix']}", '180000.00', 'open', $fixture['now'], $fixture['now']]);
+    $invoiceId = (int) $pdo->lastInsertId();
+    $pdo->prepare('INSERT INTO billing_payments (tenant_id, subscription_id, invoice_id, amount, status, provider, recorded_by_admin_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
+        ->execute([$fixture['tenantId'], $subscriptionId, $invoiceId, '180000.00', 'pending', 'manual', $adminId, $fixture['now'], $fixture['now']]);
+    $paymentId = (int) $pdo->lastInsertId();
+
+    return array_merge($fixture, compact('adminId', 'planId', 'subscriptionId', 'invoiceId', 'paymentId'));
+}
+
 function cleanupConcurrencyFixture(array $fixture): void
 {
     $pdo = concurrencyPdo();
@@ -126,6 +153,12 @@ function cleanupConcurrencyFixture(array $fixture): void
     ] as $table) {
         $column = $table === 'tenants' ? 'id' : 'tenant_id';
         $pdo->prepare("DELETE FROM {$table} WHERE {$column} = ?")->execute([$fixture['tenantId']]);
+    }
+    if (isset($fixture['planId'])) {
+        $pdo->prepare('DELETE FROM plans WHERE id = ?')->execute([$fixture['planId']]);
+    }
+    if (isset($fixture['adminId'])) {
+        $pdo->prepare('DELETE FROM admins WHERE id = ?')->execute([$fixture['adminId']]);
     }
 }
 
@@ -247,6 +280,34 @@ it('makes scheduler expiry versus payment deterministic at the TTL boundary', fu
         expect($status)->toBe('expired')
             ->and(collect($outcomes)->contains(fn (string $value): bool => in_array($value, ['expired', 'TRANSACTION_EXPIRED'], true)))->toBeTrue()
             ->and(collect($outcomes)->contains(fn (string $value): bool => in_array($value, ['skipped', 'TRANSACTION_ALREADY_PROCESSED'], true)))->toBeTrue();
+    } finally {
+        cleanupConcurrencyFixture($fixture);
+    }
+});
+
+it('serializes billing subscription sweep versus manual payment verification', function () {
+    $fixture = billingConcurrencyFixture();
+    $verify = [PHP_BINARY, base_path('tests/Support/concurrent-billing-worker.php'), 'verify',
+        (string) $fixture['adminId'], (string) $fixture['paymentId']];
+    $sweep = [PHP_BINARY, base_path('tests/Support/concurrent-billing-worker.php'), 'sweep',
+        (string) $fixture['adminId'], (string) $fixture['paymentId']];
+
+    try {
+        $outcomes = runConcurrentWorkers([$verify, $sweep]);
+        sort($outcomes);
+        expect($outcomes)->toBe(['swept', 'verified']);
+
+        $pdo = concurrencyPdo();
+        foreach ([
+            ['SELECT status FROM subscriptions WHERE id = ?', $fixture['subscriptionId'], 'active'],
+            ['SELECT status FROM invoices WHERE id = ?', $fixture['invoiceId'], 'paid'],
+            ['SELECT status FROM billing_payments WHERE id = ?', $fixture['paymentId'], 'paid'],
+            ['SELECT COUNT(*) FROM audit_logs WHERE tenant_id = ? AND action = "billing.payment_verified"', $fixture['tenantId'], '1'],
+        ] as [$sql, $parameter, $expected]) {
+            $statement = $pdo->prepare($sql);
+            $statement->execute([$parameter]);
+            expect((string) $statement->fetchColumn())->toBe($expected);
+        }
     } finally {
         cleanupConcurrencyFixture($fixture);
     }

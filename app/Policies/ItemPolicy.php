@@ -2,8 +2,10 @@
 
 namespace App\Policies;
 
+use App\Enums\SubscriptionCapability;
 use App\Enums\UserRole;
 use App\Models\User;
+use App\Support\SubscriptionCapabilityService;
 use Illuminate\Database\Eloquent\Model;
 
 class ItemPolicy extends TenantOwnerPolicy
@@ -21,6 +23,7 @@ class ItemPolicy extends TenantOwnerPolicy
 
     private function activeStaff(User $user): bool
     {
-        return $user->role === UserRole::Staff && $user->is_active && $user->tenant?->canOperate() === true;
+        return $user->role === UserRole::Staff && $user->is_active && $user->tenant?->canOperate() === true
+            && app(SubscriptionCapabilityService::class)->allows($user, SubscriptionCapability::Read);
     }
 }

@@ -2,8 +2,11 @@
 
 namespace App\Policies;
 
+use App\Enums\SubscriptionCapability;
 use App\Enums\UserRole;
 use App\Models\User;
+use App\Services\ImpersonationContext;
+use App\Support\SubscriptionCapabilityService;
 
 class UserPolicy
 {
@@ -36,6 +39,8 @@ class UserPolicy
 
     private function owner(User $user): bool
     {
-        return $user->role === UserRole::Owner && $user->is_active && $user->tenant?->canOperate() === true;
+        return $user->role === UserRole::Owner && $user->is_active && $user->tenant?->canOperate() === true
+            && ! ImpersonationContext::active()
+            && app(SubscriptionCapabilityService::class)->allows($user, SubscriptionCapability::Configure);
     }
 }

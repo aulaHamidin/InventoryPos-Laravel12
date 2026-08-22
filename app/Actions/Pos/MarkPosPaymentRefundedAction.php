@@ -4,6 +4,7 @@ namespace App\Actions\Pos;
 
 use App\Actions\Audit\RecordAuditAction;
 use App\Enums\PosPaymentStatus;
+use App\Enums\SubscriptionCapability;
 use App\Exceptions\ApiProblemException;
 use App\Models\PosPayment;
 use App\Models\PosTransaction;
@@ -122,6 +123,6 @@ class MarkPosPaymentRefundedAction
 
     private function assertOwner(User $actor): void
     {
-        OwnerActorGuard::assert($actor);
+        OwnerActorGuard::assert($actor, SubscriptionCapability::Operate);
     }
 }

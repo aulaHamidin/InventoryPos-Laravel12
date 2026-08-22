@@ -8,6 +8,7 @@ use App\Enums\ShoppingListStatus;
 use App\Filament\Resources\ShoppingListResource\Pages;
 use App\Models\ShoppingList;
 use App\Models\Supplier;
+use App\Services\ImpersonationContext;
 use App\Support\AuditContext;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -115,6 +116,11 @@ class ShoppingListResource extends Resource
     public static function getRelations(): array
     {
         return [];
+    }
+
+    public static function canViewAny(): bool
+    {
+        return ! ImpersonationContext::isSupport() && parent::canViewAny();
     }
 
     public static function getPages(): array

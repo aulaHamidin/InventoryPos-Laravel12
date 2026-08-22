@@ -4,6 +4,7 @@ namespace App\Actions\Opname;
 
 use App\Actions\Audit\RecordAuditAction;
 use App\Enums\StockOpnameStatus;
+use App\Enums\SubscriptionCapability;
 use App\Exceptions\ApiProblemException;
 use App\Models\Item;
 use App\Models\StockOpname;
@@ -40,7 +41,7 @@ class SaveOpnameCountAction
             }
         }
 
-        OwnerActorGuard::assert($actor);
+        OwnerActorGuard::assert($actor, SubscriptionCapability::Operate);
         OwnershipGuard::validate(StockOpname::class, $opnameId);
         $itemIds->each(fn (int $itemId) => OwnershipGuard::validate(Item::class, $itemId));
 

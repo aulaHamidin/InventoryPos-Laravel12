@@ -2,6 +2,7 @@
 
 namespace App\Actions\Audit;
 
+use App\Models\Admin;
 use App\Models\AuditLog;
 use App\Models\User;
 use App\Services\TenantContext;
@@ -15,15 +16,21 @@ class RecordAuditAction
 
     public function execute(
         string $action,
-        ?User $actor = null,
+        User|Admin|null $actor = null,
         Model|string|null $subject = null,
         ?array $oldValues = null,
         ?array $newValues = null,
         ?AuditContext $context = null,
         ?array $metadata = null,
+        ?int $tenantId = null,
+        bool $global = false,
     ): AuditLog {
         $log = new AuditLog([
-            'actor_type' => $actor ? 'user' : 'system',
+            'actor_type' => match (true) {
+                $actor instanceof Admin => 'admin',
+                $actor instanceof User => 'user',
+                default => 'system',
+            },
             'actor_id' => $actor?->getKey(),
             'action' => $action,
             'subject_type' => $subject instanceof Model ? $subject::class : $subject,
@@ -36,7 +43,8 @@ class RecordAuditAction
                 : null,
             'metadata' => $this->redactor->redact(array_merge($context?->metadata ?? [], $metadata ?? [])),
         ]);
-        $log->tenant_id = TenantContext::hasTenant() ? TenantContext::id() : $actor?->tenant_id;
+        $log->tenant_id = $global ? null : ($tenantId
+            ?? (TenantContext::hasTenant() ? TenantContext::id() : ($actor instanceof User ? $actor->tenant_id : null)));
         $log->save();
 
         return $log;

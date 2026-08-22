@@ -3,6 +3,7 @@
 namespace App\Actions\Inventory;
 
 use App\Actions\Audit\RecordAuditAction;
+use App\Enums\SubscriptionCapability;
 use App\Models\Item;
 use App\Models\StockMovement;
 use App\Models\User;
@@ -32,7 +33,7 @@ class AdjustStockAction
             throw ValidationException::withMessages(['note' => ['Catatan penyesuaian wajib diisi.']]);
         }
 
-        OwnerActorGuard::assert($actor);
+        OwnerActorGuard::assert($actor, SubscriptionCapability::Operate);
         OwnershipGuard::validate(Item::class, $itemId);
 
         return DB::transaction(function () use ($itemId, $qty, $direction, $note, $actor, $context): StockMovement {

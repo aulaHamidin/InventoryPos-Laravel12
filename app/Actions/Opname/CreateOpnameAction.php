@@ -5,6 +5,7 @@ namespace App\Actions\Opname;
 use App\Actions\Audit\RecordAuditAction;
 use App\Enums\StockOpnameScope;
 use App\Enums\StockOpnameStatus;
+use App\Enums\SubscriptionCapability;
 use App\Exceptions\ApiProblemException;
 use App\Models\Item;
 use App\Models\Rack;
@@ -40,7 +41,7 @@ class CreateOpnameAction
             throw ValidationException::withMessages(['rack_id' => ['Rak tidak boleh dikirim untuk opname full.']]);
         }
 
-        OwnerActorGuard::assert($actor);
+        OwnerActorGuard::assert($actor, SubscriptionCapability::Operate);
         if ($rackId !== null) {
             OwnershipGuard::validate(Rack::class, $rackId);
         }

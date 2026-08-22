@@ -5,6 +5,7 @@ namespace App\Actions\Pos;
 use App\Actions\Audit\RecordAuditAction;
 use App\Enums\PosPaymentStatus;
 use App\Enums\PosTransactionStatus;
+use App\Enums\SubscriptionCapability;
 use App\Enums\UserRole;
 use App\Events\ItemAnalyticsRecalculationRequested;
 use App\Exceptions\ApiProblemException;
@@ -186,6 +187,6 @@ class ReturnPosTransactionAction
 
     private function assertOwner(User $actor): void
     {
-        OwnerActorGuard::assert($actor);
+        OwnerActorGuard::assert($actor, SubscriptionCapability::Operate);
     }
 }

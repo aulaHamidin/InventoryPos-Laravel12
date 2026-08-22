@@ -4,6 +4,7 @@ namespace App\Actions\Shopping;
 
 use App\Actions\Audit\RecordAuditAction;
 use App\Enums\ShoppingListStatus;
+use App\Enums\SubscriptionCapability;
 use App\Models\ShoppingList;
 use App\Models\ShoppingListItem;
 use App\Models\Supplier;
@@ -20,7 +21,7 @@ class SubmitShoppingListAction
 
     public function execute(int $shoppingListId, array $submittedItems, User $actor, ?AuditContext $context = null): ShoppingList
     {
-        OwnerActorGuard::assert($actor);
+        OwnerActorGuard::assert($actor, SubscriptionCapability::Operate);
         OwnershipGuard::validate(ShoppingList::class, $shoppingListId);
 
         return DB::transaction(function () use ($shoppingListId, $submittedItems, $actor, $context): ShoppingList {

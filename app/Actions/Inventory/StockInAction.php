@@ -3,6 +3,7 @@
 namespace App\Actions\Inventory;
 
 use App\Actions\Audit\RecordAuditAction;
+use App\Enums\SubscriptionCapability;
 use App\Models\Item;
 use App\Models\StockMovement;
 use App\Models\Supplier;
@@ -39,7 +40,7 @@ class StockInAction
             throw ValidationException::withMessages(['harga_satuan' => ['Harga satuan tidak valid.']]);
         }
 
-        OwnerActorGuard::assert($actor);
+        OwnerActorGuard::assert($actor, SubscriptionCapability::Operate);
         OwnershipGuard::validate(Item::class, $itemId);
         if ($supplierId !== null) {
             OwnershipGuard::validate(Supplier::class, $supplierId);

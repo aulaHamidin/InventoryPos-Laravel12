@@ -12,18 +12,33 @@ class Admin extends Authenticatable implements FilamentUser
 {
     use Notifiable;
 
-    protected $fillable = ['name', 'email', 'password', 'role', 'two_factor_secret', 'two_factor_confirmed_at'];
+    protected $attributes = ['is_active' => true, 'auth_version' => 1];
 
-    protected $hidden = ['password', 'remember_token', 'two_factor_secret'];
+    protected $fillable = ['name', 'email', 'password'];
+
+    protected $hidden = [
+        'password', 'remember_token', 'two_factor_secret',
+        'two_factor_recovery_code_hashes', 'two_factor_last_used_step',
+    ];
 
     protected function casts(): array
     {
-        return ['password' => 'hashed', 'role' => AdminRole::class, 'two_factor_confirmed_at' => 'datetime'];
+        return [
+            'password' => 'hashed',
+            'role' => AdminRole::class,
+            'is_active' => 'boolean',
+            'auth_version' => 'integer',
+            'two_factor_secret' => 'encrypted',
+            'two_factor_confirmed_at' => 'immutable_datetime',
+            'two_factor_recovery_code_hashes' => 'array',
+            'two_factor_last_used_step' => 'integer',
+        ];
     }
 
     public function canAccessPanel(Panel $panel): bool
     {
         return $panel->getId() === 'admin'
-            && in_array($this->role, [AdminRole::SuperAdmin, AdminRole::Support], true);
+            && in_array($this->role, [AdminRole::SuperAdmin, AdminRole::Support], true)
+            && $this->is_active;
     }
 }

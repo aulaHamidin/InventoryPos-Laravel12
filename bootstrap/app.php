@@ -2,6 +2,7 @@
 
 use App\Exceptions\ApiProblemException;
 use App\Http\Middleware\AddSecurityHeaders;
+use App\Http\Middleware\RequireSubscriptionCapability;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -22,6 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->alias(['subscription' => RequireSubscriptionCapability::class]);
         $middleware->append(AddSecurityHeaders::class);
         $middleware->api(prepend: [
             EnsureFrontendRequestsAreStateful::class,
