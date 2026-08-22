@@ -148,6 +148,14 @@ Payment:
 - Trial reuse harus ditolak oleh Action berdasarkan histori subscription.
 - MVP manual billing.
 - v1 automated billing.
+- CD-10.1 capability: trial/active normal, past-due read+operational write tetapi configuration blocked, suspended/expired read-only, missing fail-closed.
+- Billing capability adalah upper bound setelah role; Staff tidak pernah memperoleh hak tambahan.
+- Aging memakai Jakarta: trial→expired dan active→past_due pada ends_at; past_due→suspended setelah tujuh hari.
+- MRR active-only; yearly dibagi 12; Legacy/trial/past-due/suspended/expired dikecualikan.
+- Referenced plan immutable. Maksimum satu current subscription per tenant dan satu open invoice per subscription.
+- F10 manual payment wajib record pending lalu verify/reject secara atomik dengan lock Tenant→Subscription→Invoice→Payment.
+- Lifetime trial memakai unique HMAC claim yang bertahan setelah tenant purge.
+- Midtrans, automatic invoice, Owner 2FA, dan billing refund tetap F11.
 
 ### Deletion
 
@@ -158,6 +166,9 @@ Payment:
 - Purge menggunakan `DELETE FROM tenants WHERE id = ?`.
 - Child FK menggunakan `ON DELETE CASCADE`.
 - Purge dilakukan command/scheduler setelah safety checks.
+- F10 retention 30 hari; Owner dapat cancel sebelum approval dan Super Admin dapat cancel sebelum queued.
+- Approval memban tenant dan mencabut session/token; cancellation tidak memulihkan credential lama.
+- Purge mempertahankan global non-PII tombstone serta lifetime trial claim.
 
 ### Security
 
@@ -166,6 +177,9 @@ Payment:
 - Super Admin support access wajib audit.
 - Impersonation wajib reason + expiry + banner + audit.
 - Super Admin tidak boleh direct-edit stock.
+- Super Admin dan Support wajib TOTP; session memakai Admin auth version dan recovery code sekali pakai.
+- Support projection tidak memuat MRR, amount, payment reference, credential, cost, margin, atau profit.
+- Impersonation F10 hanya Owner aktif, tenant operational-active, read-only, session-bound, dan maksimum 30 menit.
 
 ### Rate Limit & Transport Hardening (CD-9.2)
 

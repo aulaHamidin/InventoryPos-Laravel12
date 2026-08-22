@@ -382,6 +382,17 @@ Satu nomor HP hanya berhak mendapatkan trial gratis satu kali sepanjang masa.
 - Pembayaran subscription diverifikasi manual.
 - Tidak ada self-service onboarding.
 
+CD-10.1 mengunci MVP F10 sebagai berikut:
+
+- provisioning Tenant+Owner selalu atomik dan memilih trial 14 hari atau paid-pending;
+- payment manual dicatat `pending`, lalu diverifikasi/reject melalui Action terpisah;
+- trial/active beroperasi penuh, past-due memperoleh grace operasional tujuh hari, sedangkan suspended/expired read-only;
+- plan yang sudah dipakai immutable dan perubahan harga memakai versi clone;
+- MRR hanya subscription active, monthly penuh dan yearly dibagi dua belas;
+- tenant existing memperoleh internal Legacy subscription non-aging agar upgrade tidak menyebabkan lockout;
+- Admin/Support wajib TOTP; Support hanya mendapat projection minimum dan impersonation read-only;
+- deployment runtime tetap ditunda ke F9B.
+
 ### v1
 
 - Owner registrasi sendiri.
@@ -414,6 +425,8 @@ Alurnya:
 
 `request → review/approval → deletion queue → retention period → tenant purge`.
 
+F10 menetapkan retention 30 hari. Owner dapat membatalkan sebelum approval; Super Admin dapat membatalkan approval sebelum queued. Approval memban tenant dan mencabut session/token. Purge menyimpan global tombstone HMAC non-PII serta lifetime trial claim, tetapi menghapus data tenant/audit tenant melalui cascade.
+
 Purge dilakukan sebagai satu operasi level tenant dan mengandalkan `ON DELETE CASCADE` dari `tenants.id` ke seluruh child records.
 
 Tidak ada endpoint `DELETE` untuk record transaksi individual.
@@ -426,6 +439,7 @@ Tidak ada endpoint `DELETE` untuk record transaksi individual.
 - `tenant_id` tidak pernah berasal dari client.
 - Ownership Guard wajib memvalidasi semua foreign key tenant-scoped.
 - Owner dan Admin wajib 2FA sesuai policy.
+- F10 mewajibkan TOTP untuk Super Admin dan Support; Owner 2FA tetap F11.
 - Support access wajib audit.
 - Impersonation wajib:
   - alasan;

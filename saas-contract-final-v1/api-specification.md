@@ -568,6 +568,22 @@ Receiving calls stock-in Action.
 
 Admin-only endpoints may create tenant/subscription/payment records through admin panel.
 
+F10 tidak membuka Admin JSON API. Admin mutation hanya melalui Filament dan Actions.
+
+Owner-only F10:
+
+- `GET /billing/subscription`
+- `GET /billing/invoices`
+- `GET /tenant/deletion-request`
+- `POST /tenant/deletion-request`
+- `POST /tenant/deletion-request/cancel`
+
+Semua path berada di `/api/v1`. Staff menerima `403`, tenant ID tidak berasal dari client, body strict, dan timestamps memakai offset `+07:00`.
+
+Subscription response memuat status, plan code/name/interval, starts/ends/grace timestamps, dan capability flags. Invoice projection memuat number, plan, amount string, due/status/paid timestamps tanpa internal Admin fields.
+
+Deletion reason wajib 10–1.000 karakter. Duplicate request menghasilkan `409 DELETION_REQUEST_EXISTS`; forbidden state menghasilkan `403 SUBSCRIPTION_CAPABILITY_DENIED` dengan zero mutation/audit/job.
+
 ### v1
 
 Self-service and gateway billing endpoints are enabled.
@@ -604,6 +620,10 @@ Request:
 
 ### `GET /tenant/deletion-request`
 
+### `POST /tenant/deletion-request/cancel`
+
+Owner hanya dapat cancel request berstatus `requested`.
+
 ### `POST /admin/tenant-deletion-requests/{id}/approve`
 
 ### `POST /admin/tenant-deletion-requests/{id}/reject`
@@ -627,6 +647,8 @@ Representative endpoints:
 - `POST /admin/tenants/{id}/reset-owner`
 - `POST /admin/impersonation/start`
 - `POST /admin/impersonation/end`
+
+Daftar ini adalah capability UI/Action, bukan public JSON route pada F10.
 
 Impersonation requires:
 

@@ -565,6 +565,37 @@ Impersonation wajib mempunyai expiration.
 
 ---
 
+### 3.25 Refinement Schema F10 (CD-10.1)
+
+`plans` menambah unique immutable `code` dan `is_internal`. Referenced plan tidak dapat mengubah code/name/price/interval/trial policy; hanya deactivate atau clone.
+
+`subscriptions` memakai generated nullable `current_slot` dan `UNIQUE(tenant_id, current_slot)`; slot bernilai `1` untuk seluruh status selain `expired`. Existing tenant dibackfill ke internal Legacy plan Rp0 dengan active non-aging subscription.
+
+`invoices` memiliki `plan_id`, generated nullable `open_slot`, dan `UNIQUE(subscription_id, open_slot)`. Invoice number memakai `INV-{YYYYMM}-{ULID}`. Amount berasal dari plan/invoice server-side.
+
+`billing_payments` menambah recorder/verifier Admin, verified timestamp, serta failure reason. Full provider reference tidak masuk audit/log. Workflow refund belum aktif pada F10.
+
+`trial_claims` adalah global table berisi unique HMAC normalized phone dan timestamp tanpa FK tenant/raw phone. Claim tidak ikut tenant purge.
+
+`tenant_deletion_requests` memakai requester User, reviewer Admin, previous operational status, status tambahan `cancelled`, serta review/cancel/queue/purge timestamps. FK requester menggunakan null-on-delete agar cascade tenant tidak terhalang.
+
+`impersonation_sessions` menyimpan session fingerprint hash dan end reason. Maksimum durasi 30 menit.
+
+`admins` menambah `is_active`, `auth_version`, recovery-code hashes, dan last-used TOTP step. Existing Admin menjadi active/version `1` dan wajib enrol TOTP.
+
+Minimum indexes F10:
+
+- `(tenant_id, status, ends_at, id)` subscription;
+- `(subscription_id, status, due_at, id)` invoice;
+- `(invoice_id, status, id)` billing payment;
+- `(status, purge_after, id)` deletion request;
+- `(admin_id, ended_at, expires_at, id)` impersonation;
+- `(role, is_active, id)` Admin.
+
+Billing/deletion business timestamps dibuat di Jakarta dan disimpan sebagai UTC `DATETIME`. Rollback F10 bersifat billing/security-lossy.
+
+---
+
 ## 4. Foreign Key dan Tenant Integrity
 
 Semua child tenant data memiliki FK ke tenant.
@@ -645,3 +676,7 @@ Purge bersifat irreversible.
 12. Stock mutation dan movement insert satu transaction.
 13. Multi-item lock order berdasarkan ascending item ID.
 14. Tenant purge hanya level tenant.
+15. Maksimum satu subscription non-expired per tenant.
+16. Maksimum satu invoice open per subscription.
+17. Trial claim tetap bertahan setelah tenant purge.
+18. Referenced plan immutable.

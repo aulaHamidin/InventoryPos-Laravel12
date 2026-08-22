@@ -226,6 +226,17 @@ suspended → expired
 
 `tenants.operational_status` tidak mengikuti state machine subscription.
 
+CD-10.1 menambahkan capability layer setelah Policy role:
+
+```text
+trial|active       → role capability normal
+past_due          → read + operational write; configuration write blocked
+suspended|expired → read-only; Owner billing/deletion tetap tersedia
+missing/corrupt   → fail-closed; Owner billing/support/deletion only
+```
+
+Scheduler memakai `BillingClock` Jakarta: trial→expired dan active→past_due pada ends_at, kemudian past_due→suspended setelah tujuh hari. System maintenance tetap berjalan dan operational ban selalu lebih kuat.
+
 ---
 
 ### 5.4 Shopping List
@@ -579,6 +590,8 @@ else → create trial
 
 Trial record tidak boleh dihapus individual.
 
+F10 memakai unique global HMAC `trial_claims` sebagai concurrency/lifetime guard yang bertahan setelah purge. Plan referenced immutable. Billing mutation mengunci Tenant → Subscription → Invoice → Payment.
+
 ---
 
 ## 15. Tenant Purge
@@ -593,6 +606,8 @@ Preconditions:
 - purge_after <= now;
 - tenant tidak aktif;
 - safety checks lulus.
+
+Retention F10 adalah 30 hari. Approval memban tenant dan mencabut session/token; cancellation sebelum queued memulihkan operational status tetapi tidak credential lama. Purge transaction membuat global non-PII `tenant.purged` tombstone dan kemudian menghapus tenant melalui cascade.
 
 Operation:
 
@@ -620,6 +635,8 @@ Super Admin impersonation wajib:
 - audit event;
 - visible banner;
 - explicit end.
+
+F10 membatasi Super Admin dan Support ke Owner aktif, tenant operational-active, read-only, session-bound, maksimum 30 menit. Semua Action mutation memeriksa impersonation guard. Support projection menghapus cost, margin, profit, MRR, amount, dan payment reference.
 
 Tidak boleh digunakan tanpa alasan.
 

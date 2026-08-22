@@ -128,7 +128,7 @@ Empat area belum memiliki detail yang cukup untuk diimplementasikan tanpa keputu
 |---|---|---|
 | CD-6.1 | Kontrak lama mengunci Midtrans POS tetapi kebutuhan produk adalah pencatatan manual | Ditutup oleh `document-delta-f6-pos-manual-payment.md`; Midtrans tetap hanya untuk billing F11 |
 | CD-7.1 | Batas numerik, movement pembentuk demand, window, eligibility, dead override, persistence, recalculation, API, dan permission analytics | **Ditutup 2026-08-16** oleh `document-delta-f7-analytics-smart-threshold.md`; `tenant.dead_stock_days=0` menonaktifkan dead |
-| CD-10.1 | Capability matrix subscription `trial/active/past_due/suspended/expired` diwajibkan tetapi belum dirinci | Ajukan matrix read/write/login/billing yang eksplisit tanpa mencampur `tenants.operational_status` |
+| CD-10.1 | Capability, Admin 2FA, billing concurrency, legacy backfill, impersonation, dan deletion belum decision-complete | **Ditutup 2026-08-22** oleh `document-delta-f10-billing-admin.md`; operational status tetap independen dari billing |
 | CD-11.1 | Provider, expiry, retry, attempt limit, rate limit, dan penyimpanan OTP belum dikunci | Ajukan Document Delta keamanan OTP; jangan menambah tabel/endpoint di luar API contract tanpa persetujuan |
 
 Mapping Midtrans hanya berlaku pada billing Fase 11. POS Fase 6 tidak memiliki provider secret, webhook, atau reconciliation eksternal.
@@ -486,11 +486,14 @@ Mengisi shell `/admin` dengan operasional platform: tenant, plan, subscription, 
 - CD-10.1 capability matrix disetujui.
 - Policy 2FA Admin platform ditetapkan dan ditegakkan sebelum akses sensitif diaktifkan.
 
+CD-10.1 telah disahkan melalui [`document-delta-f10-billing-admin.md`](document-delta-f10-billing-admin.md). Implementation plan: [`implementation-plan-fase-10.md`](implementation-plan-fase-10.md) (**DISETUJUI UNTUK IMPLEMENTASI**).
+
 ### 10.3 Deliverable
 
 **Billing schema dan state machine**
 
 - Migration `plans`, `subscriptions`, `billing_payments`, `invoices`, dan immutable `subscription_events` sesuai DDD.
+- Migration juga mencakup `trial_claims`, `impersonation_sessions`, `tenant_deletion_requests`, serta Admin MFA/lifecycle sesuai CD-10.1.
 - `subscriptions.ends_at` selalu non-null.
 - State transition hanya yang legal menurut SAD; setiap mutation menghasilkan subscription event dan audit log.
 - `CreateSubscriptionAction` memeriksa histori trial owner/no HP sebelum membuat trial 14 hari.
@@ -765,4 +768,4 @@ Evidence tidak boleh memuat `.env`, secret, access token, OTP nyata, webhook sig
 
 ## 16. Langkah Berikutnya
 
-F9A berstatus **HARDENING PRE-DEPLOY SELESAI** dengan baseline resmi F10 `3c9cf4295b42abac8a3128098f645ad39176eff4`. Langkah berikutnya adalah menyusun dan mengesahkan CD-10.1 serta implementation plan F10 — Billing MRR & Admin Pusat. Fase 9 tetap terbuka; deployment production-like, migration/backfill runtime, backup/restore drill, dan acceptance operasional tetap menjadi gate F9B/release v1.
+CD-10.1 dan implementation plan F10 telah disahkan dengan baseline `3c9cf4295b42abac8a3128098f645ad39176eff4`. Langkah berikutnya adalah menjalankan implementation plan F10 — Billing MRR & Admin Pusat melalui local/CI tanpa deployment production. Fase 9 tetap terbuka; deployment production-like, migration/backfill runtime, backup/restore drill, dan acceptance operasional tetap menjadi gate F9B/release v1.

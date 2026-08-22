@@ -289,6 +289,10 @@ Fase 9 dan Fase 12 baru selesai setelah status **F9B/RUNTIME ACCEPTANCE SELESAI*
 
 ## 12. Fase 10 — Billing MRR & Admin Pusat
 
+CD-10.1 mengunci capability subscription, Legacy backfill, active-only MRR, plan immutability, manual payment dua langkah, Admin TOTP, minimum Support projection, read-only impersonation, trial HMAC, dan deletion retention 30 hari.
+
+Baseline resmi F10: `3c9cf4295b42abac8a3128098f645ad39176eff4`. Implementation plan khusus: [`implementation-plan-fase-10.md`](implementation-plan-fase-10.md) (**DISETUJUI UNTUK IMPLEMENTASI**).
+
 Fase ini melanjutkan shell `/admin` dari Fase 0 dengan resource operasional platform. Panel tenant tetap terisolasi di `/app`.
 
 Entry gate: F9A selesai, tidak ada P0, setiap P1 memiliki mitigasi/keputusan eksplisit, dan CI utama hijau.
