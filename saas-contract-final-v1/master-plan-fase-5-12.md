@@ -11,13 +11,13 @@ Baseline aplikasi: **Fase 0–4 selesai; gate lokal, visual, dan CI lulus**
 
 ## 1. Tujuan dan Batas Master Plan
 
-Dokumen ini menjadi rencana induk pelaksanaan Fase 5 sampai Fase 12. Implementasi tetap dilakukan **satu fase per satu fase**, bukan sebagai satu perubahan besar, agar setiap domain dapat diverifikasi dan ditutup sebelum dependency berikutnya dimulai.
+Dokumen ini menjadi rencana induk pelaksanaan Fase 5 sampai Fase 12. Implementasi tetap dilakukan sebagai increment berurutan, bukan sebagai satu perubahan besar. CD-9.1 memisahkan gate F9A/F9B dan code-complete/runtime acceptance F12 tanpa mengubah nomor fitur Fase 10–12.
 
 Master plan ini:
 
 - tidak mengubah kontrak produk yang sudah disetujui;
 - menguraikan dependency, deliverable, pengujian, visual gate, dan exit criteria;
-- mengunci urutan eksekusi utama `F5 → F6 → F7 → F8 → F9 → F10 → F11 → F12`;
+- mengunci urutan eksekusi utama `F5 → F6 → F7 → F8 → F9A → F10 → F11 → F12 code-complete → F9B + F12 runtime acceptance`;
 - mewajibkan Document Delta sebelum coding jika ditemukan schema, enum, endpoint, business rule, permission, atau UI state baru;
 - tidak mencakup Fase 13/Public v1.
 
@@ -44,14 +44,16 @@ flowchart LR
     F5 --> F6["Fase 6\nPOS Lengkap & Manual Non-Tunai"]
     F6 --> F7["Fase 7\nAnalytics & Threshold"]
     F7 --> F8["Fase 8\nStaff & Multi-Kasir"]
-    F8 --> F9["Fase 9\nHardening & Pilot"]
-    F9 --> F10["Fase 10\nBilling & Admin Pusat"]
+    F8 --> F9A["Fase 9A\nHardening Pre-Deploy"]
+    F9A --> F10["Fase 10\nBilling & Admin Pusat"]
     F10 --> F11["Fase 11\nSelf-Service & Billing Otomatis"]
-    F11 --> F12["Fase 12\nObservability"]
-    F12 --> READY["Siap Gate Fase 13"]
+    F11 --> F12C["Fase 12\nObservability Code-Complete"]
+    F12C --> PILOT["Deployment Pilot\nNon-Public"]
+    PILOT --> F9B["Fase 9B + Fase 12\nRuntime Acceptance"]
+    F9B --> READY["Siap Gate Fase 13"]
 ```
 
-Secara arsitektur Fase 5, 7, 10, dan baseline observability dapat dimulai lebih awal sesuai dependency graph lama. Untuk eksekusi repository ini, perubahan bisnis tetap ditutup secara berurutan. Instrumentasi minimum boleh ditambahkan bersama setiap fase, tetapi Fase 12 baru ditutup setelah seluruh workflow Fase 5–11 dapat dimonitor.
+Urutan di atas bersifat normatif untuk repository ini. F9A menutup hardening yang dapat dibuktikan lokal/CI, tetapi tidak menutup Fase 9. Fase 12 dapat mencapai status code-complete setelah F11, tetapi Fase 9 dan Fase 12 baru ditutup bersama setelah deployment pilot, restore drill, serta runtime acceptance F9B lulus. Production public tidak dibuka sebelum gate tersebut.
 
 ### 2.2 Siklus wajib setiap fase
 
@@ -110,10 +112,11 @@ Sebuah fase dinyatakan selesai hanya jika:
 | 6 | POS cash F2 dan ledger F1 | PRD 6.3–6.6; Blueprint 9–11; DDD 3.10–3.12; SAD 5.1–10; API 5–6; UI 23–33/66 | Setelah F5 |
 | 7 | Movement F1, Shopping F4 | PRD 6.10; Blueprint 13; DDD item analytics fields/indexes; SAD 13.1; API 4; UI 12.2/69.1; Roadmap F7 | Setelah F6 |
 | 8 | Panel tenant F0 dan POS F6 | PRD 4.2; Blueprint 4; SAD 17; UI 11/40/42; Roadmap F8 | Setelah F7 |
-| 9 | Workflow operasional F5–F8 | PRD 9–11; SAD 18–19; UI 64–65; Roadmap F9 | Setelah F8 |
-| 10 | Panel platform F0 | PRD 4.3/7/9; Blueprint 17–19; DDD 3.17–3.24; SAD 5.3/14–17; API 11–13; UI 41–44 | Setelah F9 |
+| 9A | Workflow operasional F5–F8 | PRD 9–11; SAD 18–19; UI 64–65; Roadmap F9; CD-9.1 | Setelah F8 |
+| 10 | Panel platform F0 dan gate F9A | PRD 4.3/7/9; Blueprint 17–19; DDD 3.17–3.24; SAD 5.3/14–17; API 11–13; UI 41–44 | Setelah F9A, tanpa P0 |
 | 11 | Billing/admin F10 | PRD 7 v1; Blueprint 17; DDD billing tables; SAD 5.3/14; API 3/11; UI 39–41 | Setelah F10 |
-| 12 | Queue/webhook/audit F5–F11 | PRD 9/11; Blueprint 21–22; SAD 18–19; Roadmap F12 | Setelah F11 |
+| 12 code-complete | Queue/webhook/audit F5–F11 | PRD 9/11; Blueprint 21–22; SAD 18–19; Roadmap F12; CD-9.1 | Setelah F11 |
+| 9B + 12 runtime | Seluruh workflow F0–F12 dan environment pilot | PRD 9–11; SAD 18–19; Roadmap F9/F12; CD-9.1 | Setelah F12 code-complete |
 
 ---
 
@@ -408,58 +411,56 @@ CD-8.1 disahkan pada baseline `ad07521fbdf81ccf5a3fe9185fecac5eb96fa01e`: Owner-
 
 ---
 
-## 9. Fase 9 — Hardening & Pilot
+## 9. Fase 9 — Hardening Pre-Deploy & Pilot Split
 
-Baseline resmi Fase 9: merge Fase 8 pada `main`, SHA `98e1d8775265ab7e00e8cd29c2f7fd8148aabf98`.
+Baseline resmi F9A: merge Fase 8 pada `main`, SHA `98e1d8775265ab7e00e8cd29c2f7fd8148aabf98`.
+
+Contract decision: [`document-delta-f9-hardening-pilot-split.md`](document-delta-f9-hardening-pilot-split.md) (**CD-9.1**).
 
 ### 9.1 Sasaran
 
-Membuktikan aplikasi Fase 0–8 tahan terhadap beban, race, penyalahgunaan umum, kegagalan restore, variasi browser/perangkat, dan penggunaan toko nyata sebelum domain billing dibuka.
+Memisahkan hardening yang dapat dibuktikan lokal/CI dari deployment pilot. F9A menjadi entry gate F10; F9B menutup Fase 9 bersama runtime acceptance F12 setelah seluruh kode v1 selesai.
 
-### 9.2 Deliverable
+### 9.2 F9A — Hardening Pre-Deploy
 
-**Performance dan resilience**
+- Script load/concurrency versioned untuk login/session, item search/scan, POS checkout/payment/idempotency, stock race, queue, dan Redis session revocation.
+- Security review tenant isolation, ownership, authorization, mass assignment, CSRF/session, private download, secret/log redaction, dan dependency audit.
+- Profiling query/queue mencatat environment serta batas test dan tidak membuat klaim angka tanpa baseline.
+- Browser/device matrix lokal mencakup desktop Chromium/Firefox, mobile Chromium, tablet, scanner keyboard-wedge, dan printer fallback; Safari/iOS bila perangkat tersedia.
+- Draft runbook deployment, rollback, incident, backup, restore, dan support.
 
-- Script load test versioned untuk login/session, item search/scan, checkout cash/manual, expiry race, dan concurrent stock mutation.
-- Profiling query/queue serta batas performa dicatat bersama environment test; tidak membuat klaim angka tanpa baseline.
-- Retry/idempotency dan queue failure behavior diuji.
+F9A tidak boleh mengklaim backup terjadwal, restore production-like, RPO/RTO aktual, health deployment, alert delivery nyata, atau pilot operasional.
 
-**Security review**
+### 9.3 Gate Keluar F9A
 
-- Tenant isolation, ownership guard, mass assignment, authorization, CSRF/session, billing-webhook signature, rate limiting, private file, secret management, log redaction, dan dependency audit.
-- Support/admin boundary diperiksa walaupun resource Fase 10 belum aktif.
-- Tidak ada secret atau data tenant nyata di repository/evidence.
-
-**Backup dan recovery**
-
-- Backup database dan private storage terjadwal pada environment pilot.
-- Restore dilakukan ke environment terisolasi dan diverifikasi dengan checksum/record sampling serta smoke test.
-- RPO/RTO aktual hasil latihan dicatat; bukan sekadar konfigurasi backup.
-
-**Pilot dan browser/device**
-
-- Matrix minimal: desktop Chromium/Firefox, mobile Chromium, viewport tablet, scanner keyboard-wedge, printer fallback; Safari/iOS diuji bila perangkat tersedia.
-- Runbook pilot, rollback, incident, dan support disiapkan.
-- Pilot dengan toko nyata hanya memakai persetujuan dan data yang memang ditempatkan user dalam scope.
-- Temuan diberi severity, owner, reproduksi, fix, dan retest evidence.
-
-### 9.3 Exit criteria
-
-- Tidak ada P0 security, data integrity, atau financial issue yang belum selesai.
-- Seluruh P1 yang diterima untuk ditunda memiliki mitigasi dan keputusan eksplisit.
-- Restore test berhasil.
-- Load/concurrency/security/browser matrix terdokumentasi.
-- Pilot workflow utama dapat diselesaikan tanpa kehilangan atau kebocoran data.
-
-### 9.4 Exit checklist
-
-- [ ] Load dan concurrency evidence lengkap.
+- [ ] Load/concurrency dan profiling evidence lokal/CI lengkap.
 - [ ] Security review dan dependency audit selesai.
-- [ ] Backup/restore drill berhasil.
-- [ ] Browser/device matrix selesai sesuai perangkat tersedia.
-- [ ] Pilot dan support runbook tersedia.
-- [ ] Tidak ada P0 terbuka.
+- [ ] Browser/device matrix lokal selesai sesuai perangkat tersedia.
+- [ ] Draft runbook operasional lengkap.
+- [ ] Tidak ada P0 terbuka; setiap P1 memiliki mitigasi dan keputusan eksplisit.
 - [ ] Full quality gate dan CI remote hijau.
+- [ ] Acceptance record memberi status **HARDENING PRE-DEPLOY SELESAI**.
+- [ ] Fase 9 tetap belum dicentang selesai.
+
+### 9.4 F9B — Deployment Pilot
+
+F9B dijalankan setelah F12 code-complete pada environment production-like non-public:
+
+- jalankan migration/backfill tertunda dan verifikasi aplikasi, database, Redis, queue, worker, scheduler, webhook, private storage, serta health checks;
+- jalankan backup terjadwal dan restore terisolasi dengan checksum/record sampling dan smoke test;
+- catat RPO/RTO aktual;
+- ulangi load, concurrency, security, billing, onboarding, browser/device, dan workflow F0–F12;
+- buktikan alert delivery, failed-job recovery, webhook reconciliation, serta backup failure/success behavior;
+- gunakan data sintetis secara default; data toko nyata memerlukan persetujuan eksplisit.
+
+### 9.5 Exit Akhir Fase 9
+
+- [ ] Backup/restore drill production-like berhasil.
+- [ ] Worker/scheduler/queue/webhook/storage health terbukti.
+- [ ] RPO/RTO aktual dan evidence pilot tercatat.
+- [ ] Regression terintegrasi F0–F12 lulus.
+- [ ] Tidak ada P0; P1 yang diterima memiliki mitigasi dan keputusan eksplisit.
+- [ ] F9B dan runtime acceptance F12 berstatus **F9B/RUNTIME ACCEPTANCE SELESAI**.
 - [ ] Fase 9 ditandai selesai.
 
 ---
@@ -472,7 +473,9 @@ Mengisi shell `/admin` dengan operasional platform: tenant, plan, subscription, 
 
 ### 10.2 Entry gate
 
-- Fase 9 selesai tanpa P0.
+- F9A berstatus **HARDENING PRE-DEPLOY SELESAI**.
+- Tidak ada P0 terbuka; seluruh P1 memiliki mitigasi dan keputusan eksplisit.
+- CI utama F9A hijau.
 - CD-10.1 capability matrix disetujui.
 - Policy 2FA Admin platform ditetapkan dan ditegakkan sebelum akses sensitif diaktifkan.
 
@@ -545,6 +548,7 @@ Memungkinkan Owner mendaftar sendiri, memverifikasi nomor dengan OTP, memperoleh
 - Fase 10 selesai dan subscription capability matrix stabil.
 - CD-11.1 keamanan OTP disetujui.
 - Credential Midtrans billing sandbox dan provider OTP tersedia melalui secret environment.
+- Callback sandbox dapat memakai HTTPS local tunnel; URL tunnel dan credential tidak boleh masuk repository/evidence.
 - Owner 2FA policy diselesaikan sebelum public onboarding dinyatakan siap.
 
 ### 11.3 Deliverable
@@ -600,7 +604,7 @@ Memungkinkan Owner mendaftar sendiri, memverifikasi nomor dengan OTP, memperoleh
 
 - [ ] CD-11.1 dan Owner 2FA policy selesai.
 - [ ] Trial abuse dan concurrent provisioning tests lulus.
-- [ ] Billing sandbox, duplicate, dan out-of-order tests lulus.
+- [ ] Provider sandbox nyata untuk pending, paid, failed/expired, duplicate, out-of-order, invalid signature, dan reconciliation lulus; fake-only tidak cukup.
 - [ ] Exactly-one transition/event invariant lulus.
 - [ ] Visual evidence lengkap.
 - [ ] Full quality gate dan CI remote hijau.
@@ -608,7 +612,7 @@ Memungkinkan Owner mendaftar sendiri, memverifikasi nomor dengan OTP, memperoleh
 
 ---
 
-## 12. Fase 12 — Observability
+## 12. Fase 12 — Observability Code-Complete & Runtime Acceptance
 
 ### 12.1 Sasaran
 
@@ -637,16 +641,16 @@ Membuat kegagalan aplikasi, queue, webhook, audit, dan backup terlihat serta dap
 - Runbook alert triage, queue recovery, billing-webhook replay/reconciliation, POS refund-required, backup restore, dan incident escalation.
 - Retention/redaction policy diterapkan pada log, Telescope, audit, dan backup.
 
-### 12.3 Test dan operational gate
+### 12.3 Gate Code-Complete Lokal/CI
 
 - Simulasikan application exception dan pastikan alert diterima tanpa secret leak.
 - Simulasikan failed/retried job dan verifikasi Horizon/alert.
 - Simulasikan invalid, duplicate, out-of-order, dan failed billing webhook serta POS expiry/refund-required.
 - Simulasikan backup verification gagal dan berhasil.
-- Verifikasi scheduler/worker restart serta health check.
 - Verifikasi audit review hanya untuk Admin berwenang dan Support read-only.
-- Ulangi targeted load dan security regression untuk onboarding, billing, serta Admin Fase 10–11 yang belum ada saat pilot Fase 9.
-- Jalankan restore drill terakhir dari backup yang dibuat oleh mekanisme production-like.
+- Full regression dan CI lulus sebelum status **OBSERVABILITY CODE-COMPLETE** diberikan.
+
+Scheduler/worker restart, delivery alert nyata, backup terjadwal, dan restore production-like belum dapat menutup Fase 12 pada gate ini.
 
 ### 12.4 Visual/runtime gate
 
@@ -657,15 +661,26 @@ Membuat kegagalan aplikasi, queue, webhook, audit, dan backup terlihat serta dap
 - Backup verification/restore report.
 - Evidence disimpan di `docs/evidence/f12-observability-YYYY-MM-DD/` dan bebas secret/PII sensitif.
 
-### 12.5 Exit checklist
+### 12.5 Checklist Code-Complete
 
-- [ ] Application/queue/webhook monitoring aktif.
-- [ ] Alert simulation dan redaction lulus.
+- [ ] Application/queue/webhook monitoring terimplementasi dan lulus simulasi lokal/CI.
+- [ ] Alert simulation, retention, dan redaction lulus.
 - [ ] Audit review authorization lulus.
-- [ ] Backup verification dan restore drill lulus.
 - [ ] Runbook operasional lengkap.
-- [ ] Visual/runtime evidence lengkap.
+- [ ] Visual evidence lokal lengkap.
 - [ ] Full quality gate dan CI remote hijau.
+- [ ] Acceptance record memberi status **OBSERVABILITY CODE-COMPLETE**.
+- [ ] Fase 12 tetap belum dicentang selesai.
+
+### 12.6 Runtime Acceptance Bersama F9B
+
+- [ ] Monitoring aplikasi/queue/webhook aktif pada environment pilot.
+- [ ] Scheduler/worker restart dan health check lulus.
+- [ ] Alert nyata diterima tanpa secret leak.
+- [ ] Backup terjadwal dan restore drill production-like lulus.
+- [ ] Targeted load/security regression F10–F11 lulus.
+- [ ] Visual/runtime evidence lengkap.
+- [ ] Status **F9B/RUNTIME ACCEPTANCE SELESAI** tercatat.
 - [ ] Fase 12 ditandai selesai.
 
 ---
@@ -722,12 +737,16 @@ Evidence tidak boleh memuat `.env`, secret, access token, OTP nyata, webhook sig
 - [x] Fase 6 — POS Lengkap & Pembayaran Manual Non-Tunai.
 - [x] Fase 7 — Analytics & Smart Threshold.
 - [x] Fase 8 — Staff & Multi-Kasir.
-- [ ] Fase 9 — Hardening & Pilot.
+- [ ] Fase 9 — Hardening Pre-Deploy & Pilot Split.
+  - [ ] F9A — Hardening Pre-Deploy.
+  - [ ] F9B — Deployment Pilot.
 - [ ] Fase 10 — Billing MRR & Admin Pusat.
 - [ ] Fase 11 — Self-Service Onboarding & Automated Billing.
-- [ ] Fase 12 — Observability.
+- [ ] Fase 12 — Observability Code-Complete & Runtime Acceptance.
+  - [ ] Observability code-complete.
+  - [ ] Runtime acceptance bersama F9B.
 
-### Readiness setelah Fase 12
+### Readiness setelah F9B dan Runtime Acceptance Fase 12
 
 - [ ] Tidak ada P0 security/data/financial issue.
 - [ ] Seluruh Document Delta tersinkron ke source of truth.
@@ -739,4 +758,4 @@ Evidence tidak boleh memuat `.env`, secret, access token, OTP nyata, webhook sig
 
 ## 16. Langkah Berikutnya
 
-Fase 8 telah di-merge ke `main` pada baseline resmi Fase 9 `98e1d8775265ab7e00e8cd29c2f7fd8148aabf98`. Langkah berikutnya adalah menyusun serta mengesahkan Document Delta dan implementation plan Fase 9 — Hardening & Pilot sebelum implementasinya dimulai. Deployment/backfill Fase 7 dan deployment Fase 8 tetap wajib pada gate release v1.
+CD-9.1 telah mengunci split F9A/F9B pada baseline merge F8 `98e1d8775265ab7e00e8cd29c2f7fd8148aabf98`. Langkah berikutnya adalah menyusun serta mengesahkan implementation plan F9A — Hardening Pre-Deploy sebelum implementasinya dimulai. Deployment production-like ditunda sampai seluruh kode F0–F12 code-complete; migration/backfill F7/F8 tetap wajib pada F9B dan gate release v1.

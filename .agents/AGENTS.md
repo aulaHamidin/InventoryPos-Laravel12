@@ -167,6 +167,15 @@ Payment:
 - Impersonation wajib reason + expiry + banner + audit.
 - Super Admin tidak boleh direct-edit stock.
 
+### Urutan Gate v1 (CD-9.1)
+
+- Urutan normatif setelah F8 adalah `F9A → F10 → F11 → F12 code-complete → deployment pilot → F9B + F12 runtime acceptance → Public v1`.
+- F9A lulus hanya memberi status `HARDENING PRE-DEPLOY SELESAI`; Fase 9 tetap terbuka.
+- F10 tidak boleh dimulai sebelum F9A lulus, tidak ada P0, seluruh P1 memiliki mitigasi/keputusan eksplisit, dan CI utama hijau.
+- F11 sandbox boleh memakai HTTPS local tunnel, tetapi credential/URL aktif tidak boleh masuk repository, log, atau evidence; fake-only tidak menutup gate provider.
+- F12 code-complete tidak menutup Fase 12. Health deployment, worker/scheduler, alert delivery, backup/restore, dan runtime evidence wajib lulus bersama F9B.
+- Production public dilarang sebelum status `F9B/RUNTIME ACCEPTANCE SELESAI` tercapai.
+
 ---
 
 ## 4. Permanent Rejections

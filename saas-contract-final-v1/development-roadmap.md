@@ -11,10 +11,13 @@ Urutan dibangun berdasarkan dependency dan risiko:
 4. Operasional toko.
 5. Payment.
 6. Analytics.
-7. SaaS billing.
-8. Self-service.
-9. Hardening.
-10. Public release.
+7. Staff dan multi-kasir.
+8. Hardening pre-deploy.
+9. SaaS billing dan Admin pusat.
+10. Self-service.
+11. Observability code-complete.
+12. Deployment pilot, recovery, dan runtime acceptance.
+13. Public release.
 
 Tidak ada fase dianggap selesai hanya karena kode berjalan. Acceptance Criteria + test contract wajib terpenuhi.
 
@@ -244,27 +247,44 @@ CD-8.1 mengunci: Owner-provisioned password, active/auth-version revocation, tra
 
 ---
 
-## 11. Fase 9 — Hardening & Pilot
+## 11. Fase 9 — Hardening Pre-Deploy & Pilot Split
 
-### Scope
+CD-9.1 mengunci F9A sebagai entry gate F10 dan menunda F9B sampai seluruh kode F0–F12 code-complete.
 
-- load tests;
-- concurrency;
-- security review;
-- backup restore;
-- support workflows;
-- browser/device matrix;
-- pilot with real shops.
+### F9A — Hardening Pre-Deploy
 
-### Exit criteria
+- load/concurrency test lokal/CI;
+- security review dan dependency audit;
+- query/queue profiling;
+- browser/device matrix lokal;
+- draft deployment, rollback, incident, backup, restore, dan support runbook.
 
-No unresolved P0 security/data/financial issue.
+### F9A acceptance
+
+- status **HARDENING PRE-DEPLOY SELESAI**;
+- no unresolved P0 security/data/financial issue;
+- seluruh P1 memiliki mitigasi dan keputusan eksplisit;
+- CI utama hijau;
+- Fase 9 belum ditandai selesai.
+
+### F9B — Setelah F12 Code-Complete
+
+- deployment pilot production-like dan non-public;
+- migration/backfill tertunda;
+- worker/scheduler/queue/webhook/storage health;
+- backup terjadwal, restore drill, serta RPO/RTO aktual;
+- integrated F0–F12 regression dan pilot;
+- runtime acceptance F12.
+
+Fase 9 dan Fase 12 baru selesai setelah status **F9B/RUNTIME ACCEPTANCE SELESAI** tercapai.
 
 ---
 
 ## 12. Fase 10 — Billing MRR & Admin Pusat
 
 Fase ini melanjutkan shell `/admin` dari Fase 0 dengan resource operasional platform. Panel tenant tetap terisolasi di `/app`.
+
+Entry gate: F9A selesai, tidak ada P0, setiap P1 memiliki mitigasi/keputusan eksplisit, dan CI utama hijau.
 
 ### MVP billing capability
 
@@ -297,6 +317,8 @@ Fase ini melanjutkan shell `/admin` dari Fase 0 dengan resource operasional plat
 - automatic activation;
 - trial abuse invariant.
 
+Provider OTP dan Midtrans wajib diuji pada sandbox nyata. HTTPS local tunnel diperbolehkan sebelum deployment; secret dan URL tunnel aktif tidak boleh masuk repository/evidence.
+
 ### Acceptance
 
 - previously trialed phone cannot receive second trial;
@@ -307,7 +329,7 @@ Fase ini melanjutkan shell `/admin` dari Fase 0 dengan resource operasional plat
 
 ---
 
-## 14. Fase 12 — Observability
+## 14. Fase 12 — Observability Code-Complete & Runtime Acceptance
 
 ### Scope
 
@@ -317,6 +339,11 @@ Fase ini melanjutkan shell `/admin` dari Fase 0 dengan resource operasional plat
 - alerting;
 - audit review;
 - backup verification.
+
+### Gate
+
+- Setelah F11, implementasi dan simulasi lokal/CI dapat memperoleh status **OBSERVABILITY CODE-COMPLETE**.
+- Fase 12 belum selesai sampai health deployment, worker/scheduler, alert delivery, backup/restore, dan runtime evidence lulus bersama F9B.
 
 ---
 
@@ -333,7 +360,8 @@ Public v1 hanya setelah:
 - self-service;
 - observability;
 - security;
-- recovery test
+- F9B deployment pilot;
+- recovery test dan runtime acceptance F12
 
 lulus.
 

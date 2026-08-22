@@ -19,7 +19,7 @@
 
 ## Dependency Graph & Parallelization
 
-> Rencana induk, decision gate, test matrix, visual gate, dan exit checklist Fase 5–12 tersedia di [`master-plan-fase-5-12.md`](master-plan-fase-5-12.md). Eksekusi repository dilakukan satu fase per satu fase dan setiap fase wajib ditutup oleh CI sebelum fase berikutnya dimulai.
+> Rencana induk, decision gate, test matrix, visual gate, dan exit checklist Fase 5–12 tersedia di [`master-plan-fase-5-12.md`](master-plan-fase-5-12.md). CD-9.1 mengunci split gate F9A/F9B dan code-complete/runtime acceptance F12; setiap increment tetap wajib ditutup oleh CI sebelum dependency berikutnya dimulai.
 
 ```mermaid
 graph TD
@@ -32,10 +32,12 @@ graph TD
     F6["Fase 6: POS Lengkap & Manual Non-Tunai"]
     F7["Fase 7: Analytics & Threshold"]
     F8["Fase 8: Staff & Multi-Kasir"]
-    F9["Fase 9: Hardening & Pilot"]
+    F9A["Fase 9A: Hardening Pre-Deploy"]
     F10["Fase 10: Billing MRR"]
     F11["Fase 11: Self-Service"]
-    F12["Fase 12: Observability"]
+    F12C["Fase 12: Observability Code-Complete"]
+    PILOT["Deployment Pilot Non-Public"]
+    F9B["Fase 9B + F12 Runtime Acceptance"]
     F13["Fase 13: Public v1"]
 
     F0 --> F1
@@ -45,29 +47,32 @@ graph TD
     F1 --> F5
     F2 --> F6
     F4 --> F7
-    F6 --> F8
-    F8 --> F9
-    F0 --> F10
+    F6 --> F7
+    F7 --> F8
+    F8 --> F9A
+    F9A --> F10
     F10 --> F11
-    F9 --> F13
-    F11 --> F13
-    F12 --> F13
+    F11 --> F12C
+    F12C --> PILOT
+    PILOT --> F9B
+    F9B --> F13
 ```
 
 ### Parallelization Rules
 
 | Stream | Fase | Dependency |
 |---|---|---|
-| **Core Backend** (sequential) | 0 → 1 → 2 → 6 → 8 → 9 | Strict sequential |
+| **Core Backend** (sequential) | 0 → 1 → 2 → 6 → 7 → 8 → 9A | Strict sequential |
 | **Reports** (parallel setelah F1) | 3 | Butuh F1 (master data + movements) |
 | **Shopping** (parallel setelah F1) | 4 | Butuh F1 (items + suppliers) |
 | **Opname** (parallel setelah F1) | 5 | Butuh F1 (items + stock) |
 | **Analytics** (parallel setelah F4) | 7 | Butuh F4 (threshold data) |
-| **Billing** (parallel setelah F0) | 10 → 11 | Hanya butuh F0 (tenant + auth) |
-| **Observability** (parallel) | 12 | Bisa kapan saja setelah core ada |
+| **Billing** | 10 → 11 | Setelah F9A; F11 tetap bergantung pada F10 |
+| **Observability** | 12 code-complete | Setelah F11; runtime gate ditutup bersama F9B |
+| **Pilot/release** | 9B + 12 runtime → 13 | Setelah seluruh kode F0–F12 code-complete |
 
 > [!TIP]
-> Setelah Fase 1 selesai, Fase 2, 3, 4, dan 5 bisa berjalan **paralel** karena tidak saling bergantung. Begitu juga Fase 10 (Billing) bisa dimulai begitu Fase 0 selesai.
+> Dependency arsitektur memungkinkan beberapa stream dibangun lebih awal, tetapi urutan normatif repository setelah F8 adalah `F9A → F10 → F11 → F12 code-complete → F9B + F12 runtime acceptance` sesuai CD-9.1.
 
 ---
 
@@ -440,20 +445,24 @@ new_avg = ((old_stock × old_avg) + (in_qty × in_cost)) / (old_stock + in_qty)
 
 ---
 
-## Fase 9 — Hardening & Pilot
+## Fase 9 — Hardening Pre-Deploy & Pilot Split
 
-### Deliverables
-- Load tests (k6/Artillery): concurrent stock, POS checkout, webhook flood
-- Security review checklist execution
-- Backup/restore verification
-- Browser/device matrix testing
-- Pilot deployment to VPS
-- Support workflow documentation
-- **Exit criteria**: No unresolved P0 security/data/financial issue
+### F9A Deliverables
+- Load/concurrency tests: login/session, item search, POS/payment/idempotency, stock race, queue, dan Redis revocation
+- Security review, dependency audit, query/queue profiling, serta browser/device matrix lokal
+- Draft deployment, rollback, incident, backup, restore, dan support runbook
+- **Exit status**: `HARDENING PRE-DEPLOY SELESAI`, no P0, P1 termitigasi, CI hijau; Fase 9 belum selesai
+
+### F9B Deliverables *(setelah F12 code-complete)*
+- Deployment pilot production-like non-public dan migration/backfill verification
+- Worker/scheduler/queue/webhook/storage health serta alert delivery
+- Backup terjadwal, restore drill, dan RPO/RTO aktual
+- Integrated regression/pilot F0–F12
+- **Exit status**: `F9B/RUNTIME ACCEPTANCE SELESAI`
 
 ---
 
-## Fase 10 — Billing MRR & Admin Pusat *(Parallel setelah F0)*
+## Fase 10 — Billing MRR & Admin Pusat *(Setelah F9A)*
 
 ### Deliverables
 - `plans`, `subscriptions`, `invoices`, `billing_payments`, `subscription_events` migrations
@@ -477,17 +486,20 @@ new_avg = ((old_stock × old_avg) + (in_qty × in_cost)) / (old_stock + in_qty)
 - Midtrans billing integration
 - `POST /api/v1/webhooks/midtrans-billing` (separate dari POS webhook)
 - Automatic subscription activation on payment confirmation
+- OTP/Midtrans sandbox nyata melalui environment secret; HTTPS local tunnel diperbolehkan dan tidak boleh muncul pada repository/evidence
 
 ---
 
-## Fase 12 — Observability
+## Fase 12 — Observability Code-Complete & Runtime Acceptance
 
-### Deliverables
+### Code-Complete Deliverables
 - Laravel Telescope (local/staging)
 - Horizon dashboard (queue monitoring)
 - Webhook failure monitoring + alerting
 - Scheduled backup verification
 - Audit review admin page
+
+Status **OBSERVABILITY CODE-COMPLETE** diberikan setelah implementasi/simulasi lokal dan CI lulus. Fase 12 baru selesai setelah health deployment, worker/scheduler, alert delivery, backup/restore, dan runtime evidence lulus bersama F9B.
 
 ---
 
@@ -498,8 +510,8 @@ Semua fase lulus acceptance criteria + testing contract.
 
 ### Deliverables
 - Final security audit
-- Production VPS Docker deployment
-- Docker Compose production config
+- Promosi artifact immutable yang telah lulus pilot ke public production
+- Docker Compose production config yang telah diverifikasi pada environment pilot
 - SSL/domain setup
 - Documentation
 - Monitoring active

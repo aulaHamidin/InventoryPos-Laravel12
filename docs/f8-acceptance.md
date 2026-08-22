@@ -46,7 +46,7 @@ Index dan 17 screenshot desktop 1440×900/mobile 390×844 berada di `docs/eviden
 
 Evidence memakai identitas demo sintetis dan tidak memuat password, token, email/nomor nyata, atau QRIS produksi.
 
-## Checklist penutupan dan handoff Fase 9
+## Checklist penutupan dan handoff F9A
 
 - [x] Document Delta dan seluruh source of truth F8 sinkron.
 - [x] Migration/lifecycle/session-token revocation lulus, termasuk Redis runtime.
@@ -56,7 +56,7 @@ Evidence memakai identitas demo sintetis dan tidak memuat password, token, email
 - [x] Evidence Owner/Staff desktop/mobile lengkap.
 - [x] Full local gate, `staff-runtime`, `analytics-runtime`, dan CI remote hijau.
 - [x] Commit implementasi/evidence dan SHA final tercatat.
-- [x] Fase 8 selesai; perencanaan Fase 9 boleh dimulai.
+- [x] Fase 8 selesai; perencanaan F9A boleh dimulai sesuai CD-9.1.
 
 ## Rollback dan deployment release v1 yang ditunda
 
@@ -64,4 +64,4 @@ Evidence memakai identitas demo sintetis dan tidak memuat password, token, email
 - Deployment F8 ke environment target ditunda sampai release v1. Saat release, migration, Redis session/cache/queue, worker, scheduler, health, dan revocation smoke test wajib diverifikasi.
 - Deployment/backfill F7 tetap wajib dijalankan dan lulus `analytics:status --fail-on-incomplete` sebelum release v1 dinyatakan siap.
 
-Keputusan: Fase 8 selesai untuk implementasi dan CI. Deployment F7/F8 bukan blocker perencanaan Fase 9, tetapi tetap merupakan gate wajib release v1.
+Keputusan: Fase 8 selesai untuk implementasi dan CI. CD-9.1 kemudian memisahkan F9A/F9B; deployment F7/F8 bukan blocker perencanaan F9A, tetapi tetap wajib diverifikasi pada F9B dan gate release v1.
